@@ -19,32 +19,28 @@ export default function Coin({ coin }: CoinProps) {
   const scale = useSharedValue(1);
 
   useEffect(() => {
-    rotation.value = withRepeat(
-      withTiming(360, { duration: 2000 }),
-      -1,
-      false
-    );
-    
+    rotation.value = withRepeat(withTiming(360, { duration: 2000 }), -1, false);
+
     scale.value = withRepeat(
       withSequence(
         withTiming(1.1, { duration: 800 }),
-        withTiming(1, { duration: 800 })
+        withTiming(1, { duration: 800 }),
       ),
       -1,
-      true
+      true,
     );
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: coin.x },
-      { translateY: coin.y },
+      { translateX: coin.x.value },
+      { translateY: coin.y.value },
       { rotate: `${rotation.value}deg` },
       { scale: scale.value },
     ],
   }));
 
-  if (coin.collected) {
+  if (coin.collected.value) {
     return null;
   }
 

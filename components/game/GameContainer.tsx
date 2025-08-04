@@ -4,6 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   runOnJS,
+  makeMutable,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import StartScreen from '@/components/game/screens/StartScreen';
@@ -28,13 +29,11 @@ export default function GameContainer() {
   const [distance, setDistance] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
-  
+
   const gameLoopRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const playerY = useSharedValue(GROUND_LEVEL);
-  const playerX = useSharedValue(
-    SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2,
-  );
+  const playerX = useSharedValue(SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2);
   const playerVelocity = useSharedValue(0);
   const isJetpackActive = useSharedValue(false);
   const controlDirection = useSharedValue(0);
@@ -43,11 +42,9 @@ export default function GameContainer() {
   const hasStarted = useSharedValue(false);
   const hasLiftedOff = useSharedValue(false);
 
-  const obstaclesRef = useRef<ObstacleType[]>([]);
-  const [obstacles, setObstacles] = useState<ObstacleType[]>([]);
+  const obstacles = useSharedValue<ObstacleType[]>([]);
   // Coins that are currently active in the game world
-  const coinsRef = useRef<CoinType[]>([]);
-  const [coinsList, setCoinsList] = useState<CoinType[]>([]);
+  const coinsList = useSharedValue<CoinType[]>([]);
 
   const startGame = () => {
     setGameState('playing');
@@ -63,10 +60,8 @@ export default function GameContainer() {
     hasStarted.value = false;
     hasLiftedOff.value = false;
     lastTimeRef.current = 0;
-    obstaclesRef.current = [];
-    setObstacles([]);
-    coinsRef.current = [];
-    setCoinsList([]);
+    obstacles.value = [];
+    coinsList.value = [];
     startGameLoop();
   };
 
@@ -169,8 +164,7 @@ export default function GameContainer() {
     scrollOffset.value += GameConfig.SCROLL_SPEED * deltaSeconds;
 
     // Difficulty scales with distance travelled
-    const difficulty =
-      1 + scrollOffset.value / GameConfig.DIFFICULTY_DISTANCE;
+    const difficulty = 1 + scrollOffset.value / GameConfig.DIFFICULTY_DISTANCE;
 
     // Calculate player hitbox for precise collision detection
     const playerHitbox = {
@@ -181,34 +175,31 @@ export default function GameContainer() {
     };
 
     // Update and spawn obstacles
-    let obs = obstaclesRef.current.map(o => ({
-      ...o,
-      y: o.y + GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds,
-    }));
-    obs = obs.filter(o => o.y < SCREEN_HEIGHT);
+    obstacles.value.forEach((o) => {
+      o.y.value += GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds;
+    });
+    obstacles.value = obstacles.value.filter((o) => o.y.value < SCREEN_HEIGHT);
     if (Math.random() < GameConfig.OBSTACLE_SPAWN_RATE * difficulty) {
       const width = 40;
       const height = 100;
-      const x = Math.random() * (SCREEN_WIDTH - width);
-      obs.push({
+      const xPos = Math.random() * (SCREEN_WIDTH - width);
+      obstacles.value.push({
         id: Date.now().toString(),
         type: 'platform',
-        x,
-        y: -height,
+        x: makeMutable(xPos),
+        y: makeMutable(-height),
         width,
         height,
       });
     }
-    obstaclesRef.current = obs;
-    runOnJS(setObstacles)(obs);
 
     // Collision detection between player and obstacles
-    for (const o of obs) {
+    for (const o of obstacles.value) {
       const collision =
-        playerHitbox.x < o.x + o.width &&
-        playerHitbox.x + playerHitbox.width > o.x &&
-        playerHitbox.y < o.y + o.height &&
-        playerHitbox.y + playerHitbox.height > o.y;
+        playerHitbox.x < o.x.value + o.width &&
+        playerHitbox.x + playerHitbox.width > o.x.value &&
+        playerHitbox.y < o.y.value + o.height &&
+        playerHitbox.y + playerHitbox.height > o.y.value;
       if (collision) {
         runOnJS(gameOver)();
         return;
@@ -216,38 +207,37 @@ export default function GameContainer() {
     }
 
     // Update and spawn coins
-    let coinArray = coinsRef.current.map(c => ({
-      ...c,
-      y: c.y + GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds,
-    }));
-    coinArray = coinArray.filter(c => c.y < SCREEN_HEIGHT && !c.collected);
+    coinsList.value.forEach((c) => {
+      c.y.value += GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds;
+    });
+    coinsList.value = coinsList.value.filter(
+      (c) => c.y.value < SCREEN_HEIGHT && !c.collected.value,
+    );
     if (Math.random() < GameConfig.COIN_SPAWN_RATE) {
-      const x = Math.random() * (SCREEN_WIDTH - GameConfig.COIN_SIZE);
-      coinArray.push({
+      const xPos = Math.random() * (SCREEN_WIDTH - GameConfig.COIN_SIZE);
+      coinsList.value.push({
         id: `coin-${Date.now().toString()}`,
-        x,
-        y: -GameConfig.COIN_SIZE * 2,
-        collected: false,
+        x: makeMutable(xPos),
+        y: makeMutable(-GameConfig.COIN_SIZE * 2),
+        collected: makeMutable(false),
       });
     }
-    for (const c of coinArray) {
+    for (const c of coinsList.value) {
       const collected =
-        playerHitbox.x < c.x + GameConfig.COIN_SIZE &&
-        playerHitbox.x + playerHitbox.width > c.x &&
-        playerHitbox.y < c.y + GameConfig.COIN_SIZE &&
-        playerHitbox.y + playerHitbox.height > c.y;
-      if (collected && !c.collected) {
-        c.collected = true;
-        runOnJS(setCoins)(prev => prev + 1);
+        playerHitbox.x < c.x.value + GameConfig.COIN_SIZE &&
+        playerHitbox.x + playerHitbox.width > c.x.value &&
+        playerHitbox.y < c.y.value + GameConfig.COIN_SIZE &&
+        playerHitbox.y + playerHitbox.height > c.y.value;
+      if (collected && !c.collected.value) {
+        c.collected.value = true;
+        runOnJS(setCoins)((prev) => prev + 1);
       }
     }
-    coinsRef.current = coinArray;
-    runOnJS(setCoinsList)(coinArray);
 
     // Update distance and score
     const distanceIncrement = GameConfig.SCROLL_SPEED * deltaSeconds * 0.1;
-    runOnJS(setDistance)(prev => prev + distanceIncrement);
-    runOnJS(setScore)(prev => prev + Math.floor(distanceIncrement * 10));
+    runOnJS(setDistance)((prev) => prev + distanceIncrement);
+    runOnJS(setScore)((prev) => prev + Math.floor(distanceIncrement * 10));
   };
 
   const panGesture = Gesture.Pan()
@@ -257,7 +247,7 @@ export default function GameContainer() {
       controlDirection.value = 0;
       hasStarted.value = true;
     })
-    .onUpdate(event => {
+    .onUpdate((event) => {
       playerX.value = Math.max(
         0,
         Math.min(
@@ -278,7 +268,7 @@ export default function GameContainer() {
     });
 
   const tapGesture = Gesture.Tap()
-    .onTouchesDown(e => {
+    .onTouchesDown((e) => {
       const touchX = e.allTouches[0].x;
       controlDirection.value = touchX < SCREEN_WIDTH / 2 ? -1 : 1;
       isJetpackActive.value = true;
@@ -312,7 +302,7 @@ export default function GameContainer() {
       {gameState === 'start' && (
         <StartScreen onStart={startGame} highScore={highScore} />
       )}
-      
+
       {gameState === 'playing' && (
         <GestureDetector gesture={combinedGesture}>
           <View style={styles.gameArea}>
@@ -329,7 +319,7 @@ export default function GameContainer() {
           </View>
         </GestureDetector>
       )}
-      
+
       {gameState === 'gameOver' && (
         <GameOverScreen
           score={score}

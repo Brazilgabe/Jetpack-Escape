@@ -270,6 +270,11 @@ export default function GameContainer() {
       isJetpackActive.value = false;
       // Reset upward velocity so gravity takes effect immediately
       playerVelocity.value = Math.max(playerVelocity.value, 0);
+    })
+    .onFinalize(() => {
+      // Ensure jetpack is turned off if the gesture is cancelled
+      isJetpackActive.value = false;
+      playerVelocity.value = Math.max(playerVelocity.value, 0);
     });
 
   const tapGesture = Gesture.Tap()
@@ -283,6 +288,12 @@ export default function GameContainer() {
       controlDirection.value = 0;
       isJetpackActive.value = false;
       // Reset upward velocity when jetpack is released
+      playerVelocity.value = Math.max(playerVelocity.value, 0);
+    })
+    .onFinalize(() => {
+      // Safeguard to stop jetpack and horizontal movement
+      controlDirection.value = 0;
+      isJetpackActive.value = false;
       playerVelocity.value = Math.max(playerVelocity.value, 0);
     });
 

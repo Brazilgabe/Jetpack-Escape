@@ -40,6 +40,7 @@ export default function GameContainer() {
   const controlDirection = useSharedValue(0);
   const panStartX = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
+  const hasStarted = useSharedValue(false);
 
   const obstaclesRef = useRef<ObstacleType[]>([]);
   const [obstacles, setObstacles] = useState<ObstacleType[]>([]);
@@ -58,6 +59,7 @@ export default function GameContainer() {
     isJetpackActive.value = false;
     controlDirection.value = 0;
     scrollOffset.value = 0;
+    hasStarted.value = false;
     lastTimeRef.current = 0;
     obstaclesRef.current = [];
     setObstacles([]);
@@ -71,6 +73,7 @@ export default function GameContainer() {
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
     }
+    hasStarted.value = false;
 
     const newRecord = score > highScore;
     setIsNewRecord(newRecord);
@@ -143,6 +146,10 @@ export default function GameContainer() {
       0,
       Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value),
     );
+
+    if (!hasStarted.value) {
+      return;
+    }
 
     // Update scroll offset for background
     scrollOffset.value += GameConfig.SCROLL_SPEED * deltaSeconds;
@@ -234,6 +241,7 @@ export default function GameContainer() {
       panStartX.value = playerX.value;
       isJetpackActive.value = true;
       controlDirection.value = 0;
+      hasStarted.value = true;
     })
     .onUpdate(event => {
       playerX.value = Math.max(
@@ -253,6 +261,7 @@ export default function GameContainer() {
       const touchX = e.allTouches[0].x;
       controlDirection.value = touchX < SCREEN_WIDTH / 2 ? -1 : 1;
       isJetpackActive.value = true;
+      hasStarted.value = true;
     })
     .onTouchesUp(() => {
       controlDirection.value = 0;
@@ -265,7 +274,7 @@ export default function GameContainer() {
     transform: [
       { translateX: playerX.value },
       { translateY: playerY.value },
-      { rotate: `${playerVelocity.value * 2}deg` },
+      { rotate: '0deg' },
     ],
   }));
 

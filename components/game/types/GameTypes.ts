@@ -33,6 +33,13 @@ export const GameConfig = {
   HORIZONTAL_SPEED: 300,
   PLAYER_SIZE: 60,
   COIN_SIZE: 30,
+  // Dimensions of the player's hitbox used for accurate collision detection
+  PLAYER_HITBOX: {
+    width: 40,
+    height: 50,
+    offsetX: 10,
+    offsetY: 5,
+  },
   MAX_VELOCITY: 15,
   OBSTACLE_SPAWN_RATE: 0.02,
   OBSTACLE_SPEED: 150,
@@ -47,4 +54,6 @@ export interface GameProps {
   distance: number;
   isJetpackActive: any;
   obstacles: Obstacle[];
+  // Coins currently on screen
+  coinsList: Coin[];
 }

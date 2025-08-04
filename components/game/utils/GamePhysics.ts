@@ -1,4 +1,4 @@
-import { GameConfig } from '@/components/game/types/GameTypes';
+import { GameConfig } from '../types/GameTypes';
 
 export class GamePhysics {
   static applyGravity(velocity: number, deltaTime: number): number {

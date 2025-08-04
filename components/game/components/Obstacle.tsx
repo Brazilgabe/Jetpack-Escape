@@ -21,15 +21,15 @@ export default function Obstacle({ obstacle }: ObstacleProps) {
       rotation.value = withRepeat(
         withTiming(360, { duration: 1000 }),
         -1,
-        false
+        false,
       );
     }
   }, [obstacle.type]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: obstacle.x },
-      { translateY: obstacle.y },
+      { translateX: obstacle.x.value },
+      { translateY: obstacle.y.value },
       { rotate: `${rotation.value}deg` },
     ],
   }));
@@ -40,7 +40,10 @@ export default function Obstacle({ obstacle }: ObstacleProps) {
         return (
           <LinearGradient
             colors={['#666666', '#333333']}
-            style={[styles.platform, { width: obstacle.width, height: obstacle.height }]}
+            style={[
+              styles.platform,
+              { width: obstacle.width, height: obstacle.height },
+            ]}
           />
         );
       case 'blade':

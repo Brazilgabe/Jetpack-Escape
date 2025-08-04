@@ -1,13 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import ParallaxBackground from '@/components/game/screens/ParallaxBackground';
 import Player from '@/components/game/components/Player';
 import GameHUD from '@/components/game/components/GameHUD';
 import { GameProps } from '@/components/game/types/GameTypes';
 import Obstacle from '@/components/game/components/Obstacle';
 import Coin from '@/components/game/components/Coin';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function GameScreen({
   playerAnimatedStyle,
@@ -24,10 +22,10 @@ export default function GameScreen({
       <ParallaxBackground scrollOffset={scrollOffset} />
 
       <View style={styles.gameArea}>
-        {obstacles.map(obstacle => (
+        {obstacles.value.map((obstacle) => (
           <Obstacle key={obstacle.id} obstacle={obstacle} />
         ))}
-        {coinsList.map(coin => (
+        {coinsList.value.map((coin) => (
           <Coin key={coin.id} coin={coin} />
         ))}
         <Player
@@ -35,12 +33,8 @@ export default function GameScreen({
           isJetpackActive={isJetpackActive}
         />
       </View>
-      
-      <GameHUD 
-        score={score}
-        coins={coins}
-        distance={distance}
-      />
+
+      <GameHUD score={score} coins={coins} distance={distance} />
     </View>
   );
 }

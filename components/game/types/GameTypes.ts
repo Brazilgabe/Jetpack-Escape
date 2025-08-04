@@ -1,21 +1,22 @@
 export type GameState = 'start' | 'playing' | 'paused' | 'gameOver';
 
+import type { SharedValue } from 'react-native-reanimated';
+
 export interface Obstacle {
   id: string;
   type: 'platform' | 'blade' | 'laser' | 'bird';
-  x: number;
-  y: number;
+  x: SharedValue<number>;
+  y: SharedValue<number>;
   width: number;
   height: number;
   speed?: number;
-  rotation?: number;
 }
 
 export interface Coin {
   id: string;
-  x: number;
-  y: number;
-  collected: boolean;
+  x: SharedValue<number>;
+  y: SharedValue<number>;
+  collected: SharedValue<boolean>;
 }
 
 export interface PowerUp {
@@ -59,7 +60,7 @@ export interface GameProps {
   coins: number;
   distance: number;
   isJetpackActive: any;
-  obstacles: Obstacle[];
+  obstacles: SharedValue<Obstacle[]>;
   // Coins currently on screen
-  coinsList: Coin[];
+  coinsList: SharedValue<Coin[]>;
 }

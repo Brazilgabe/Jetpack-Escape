@@ -19,6 +19,7 @@ export default function GameContainer() {
   const [coins, setCoins] = useState(0);
   const [distance, setDistance] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [isNewRecord, setIsNewRecord] = useState(false);
   
   const gameLoopRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
@@ -43,8 +44,11 @@ export default function GameContainer() {
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
     }
-    
-    if (score > highScore) {
+
+    const newRecord = score > highScore;
+    setIsNewRecord(newRecord);
+
+    if (newRecord) {
       setHighScore(score);
     }
   };
@@ -152,7 +156,7 @@ export default function GameContainer() {
           coins={coins}
           distance={Math.floor(distance)}
           highScore={highScore}
-          isNewRecord={score > highScore}
+          isNewRecord={isNewRecord}
           onRestart={restartGame}
         />
       )}

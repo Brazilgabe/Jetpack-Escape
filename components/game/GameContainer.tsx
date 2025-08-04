@@ -86,9 +86,12 @@ export default function GameContainer() {
       playerVelocity.value -= gravity * deltaSeconds;
     }
     
-    // Limit velocity
-    playerVelocity.value = Math.max(-15, Math.min(15, playerVelocity.value));
-
+    // Limit velocity based on GameConfig.MAX_VELOCITY
+    playerVelocity.value = Math.max(
+      -GameConfig.MAX_VELOCITY,
+      Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value)
+    );
+    
     // Update player position
     playerY.value += playerVelocity.value * deltaSeconds;
     

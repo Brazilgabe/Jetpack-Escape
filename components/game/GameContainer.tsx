@@ -41,6 +41,7 @@ export default function GameContainer() {
   const panStartX = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
   const hasStarted = useSharedValue(false);
+  const hasLiftedOff = useSharedValue(false);
 
   const obstaclesRef = useRef<ObstacleType[]>([]);
   const [obstacles, setObstacles] = useState<ObstacleType[]>([]);
@@ -60,6 +61,7 @@ export default function GameContainer() {
     controlDirection.value = 0;
     scrollOffset.value = 0;
     hasStarted.value = false;
+    hasLiftedOff.value = false;
     lastTimeRef.current = 0;
     obstaclesRef.current = [];
     setObstacles([]);
@@ -132,6 +134,10 @@ export default function GameContainer() {
 
       playerY.value += playerVelocity.value * deltaSeconds;
 
+      if (playerY.value < GROUND_LEVEL) {
+        hasLiftedOff.value = true;
+      }
+
       // Clamp height to target
       if (playerY.value < TARGET_HEIGHT) {
         playerY.value = TARGET_HEIGHT;
@@ -139,7 +145,7 @@ export default function GameContainer() {
       }
 
       // Ground collision after the game has started
-      if (playerY.value >= GROUND_LEVEL) {
+      if (hasLiftedOff.value && playerY.value >= GROUND_LEVEL) {
         playerY.value = GROUND_LEVEL;
         playerVelocity.value = 0;
         runOnJS(gameOver)();

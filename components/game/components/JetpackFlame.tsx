@@ -57,6 +57,7 @@ export default function JetpackFlame() {
             styles.particle,
             {
               left: 5 + index * 8,
+              // @ts-ignore - animationDelay is web only
               animationDelay: `${index * 100}ms`,
             },
           ]}

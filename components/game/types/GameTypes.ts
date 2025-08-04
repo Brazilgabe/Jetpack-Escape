@@ -31,6 +31,10 @@ export const GameConfig = {
   JETPACK_FORCE: 1200,
   SCROLL_SPEED: 200,
   HORIZONTAL_SPEED: 300,
+  // Player positioning
+  GROUND_OFFSET: 90,
+  TARGET_HEIGHT_RATIO: 1 / 3,
+  JETPACK_ASCENT_SPEED: 300,
   PLAYER_SIZE: 60,
   COIN_SIZE: 30,
   // Dimensions of the player's hitbox used for accurate collision detection
@@ -44,6 +48,8 @@ export const GameConfig = {
   OBSTACLE_SPAWN_RATE: 0.02,
   OBSTACLE_SPEED: 150,
   COIN_SPAWN_RATE: 0.03,
+  // Distance at which difficulty scales
+  DIFFICULTY_DISTANCE: 5000,
 };
 
 export interface GameProps {

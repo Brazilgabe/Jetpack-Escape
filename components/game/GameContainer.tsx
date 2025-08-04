@@ -17,7 +17,9 @@ import {
 } from './types/GameTypes';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const GROUND_LEVEL = SCREEN_HEIGHT - GameConfig.PLAYER_SIZE;
+const GROUND_LEVEL =
+  SCREEN_HEIGHT - GameConfig.PLAYER_SIZE - GameConfig.GROUND_OFFSET;
+const TARGET_HEIGHT = SCREEN_HEIGHT * GameConfig.TARGET_HEIGHT_RATIO;
 
 export default function GameContainer() {
   const [gameState, setGameState] = useState<GameState>('start');
@@ -27,7 +29,7 @@ export default function GameContainer() {
   const [highScore, setHighScore] = useState(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
   
-  const gameLoopRef = useRef<number>();
+  const gameLoopRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const playerY = useSharedValue(GROUND_LEVEL);
   const playerX = useSharedValue(
@@ -100,7 +102,7 @@ export default function GameContainer() {
 
   const updateGame = (deltaTime: number) => {
     const gravity = GameConfig.GRAVITY;
-    const jetpackForce = GameConfig.JETPACK_FORCE;
+    const ascentSpeed = GameConfig.JETPACK_ASCENT_SPEED;
     const deltaSeconds = deltaTime / 1000;
 
     // Keep the player grounded until jetpack activation
@@ -108,31 +110,29 @@ export default function GameContainer() {
       playerY.value = GROUND_LEVEL;
       playerVelocity.value = 0;
     } else {
-      // Apply thrust when the jetpack is active, otherwise let gravity pull
       if (isJetpackActive.value) {
-        playerVelocity.value -= jetpackForce * deltaSeconds;
+        // Move upward toward the target height
+        if (playerY.value > TARGET_HEIGHT) {
+          playerVelocity.value = -ascentSpeed;
+          playerY.value += playerVelocity.value * deltaSeconds;
+          if (playerY.value < TARGET_HEIGHT) {
+            playerY.value = TARGET_HEIGHT;
+            playerVelocity.value = 0;
+          }
+        } else {
+          playerY.value = TARGET_HEIGHT;
+          playerVelocity.value = 0;
+        }
       } else {
+        // Apply gravity when jetpack is inactive
         playerVelocity.value += gravity * deltaSeconds;
-      }
-
-      // Limit velocity based on GameConfig.MAX_VELOCITY
-      playerVelocity.value = Math.max(
-        -GameConfig.MAX_VELOCITY,
-        Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value)
-      );
-
-      // Update player vertical position
-      playerY.value += playerVelocity.value * deltaSeconds;
-
-      // Check collision with ground or ceiling
-      if (playerY.value >= GROUND_LEVEL) {
-        playerY.value = GROUND_LEVEL;
-        runOnJS(gameOver)();
-        return;
-      }
-      if (playerY.value < 0) {
-        runOnJS(gameOver)();
-        return;
+        playerY.value += playerVelocity.value * deltaSeconds;
+        if (playerY.value >= GROUND_LEVEL) {
+          playerY.value = GROUND_LEVEL;
+          playerVelocity.value = 0;
+          runOnJS(gameOver)();
+          return;
+        }
       }
     }
 
@@ -143,9 +143,13 @@ export default function GameContainer() {
       0,
       Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value),
     );
-    
+
     // Update scroll offset for background
     scrollOffset.value += GameConfig.SCROLL_SPEED * deltaSeconds;
+
+    // Difficulty scales with distance travelled
+    const difficulty =
+      1 + scrollOffset.value / GameConfig.DIFFICULTY_DISTANCE;
 
     // Calculate player hitbox for precise collision detection
     const playerHitbox = {
@@ -158,10 +162,10 @@ export default function GameContainer() {
     // Update and spawn obstacles
     let obs = obstaclesRef.current.map(o => ({
       ...o,
-      y: o.y + GameConfig.OBSTACLE_SPEED * deltaSeconds,
+      y: o.y + GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds,
     }));
     obs = obs.filter(o => o.y < SCREEN_HEIGHT);
-    if (Math.random() < GameConfig.OBSTACLE_SPAWN_RATE) {
+    if (Math.random() < GameConfig.OBSTACLE_SPAWN_RATE * difficulty) {
       const width = 40;
       const height = 100;
       const x = Math.random() * (SCREEN_WIDTH - width);
@@ -193,7 +197,7 @@ export default function GameContainer() {
     // Update and spawn coins
     let coinArray = coinsRef.current.map(c => ({
       ...c,
-      y: c.y + GameConfig.OBSTACLE_SPEED * deltaSeconds,
+      y: c.y + GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds,
     }));
     coinArray = coinArray.filter(c => c.y < SCREEN_HEIGHT && !c.collected);
     if (Math.random() < GameConfig.COIN_SPAWN_RATE) {

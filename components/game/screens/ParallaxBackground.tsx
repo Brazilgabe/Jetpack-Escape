@@ -1,9 +1,15 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useAnimatedStyle,
+  useAnimatedProps,
+  interpolateColor,
+} from 'react-native-reanimated';
+import { LinearGradient, LinearGradientProps } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 interface ParallaxBackgroundProps {
   scrollOffset: Animated.SharedValue<number>;
@@ -22,12 +28,19 @@ export default function ParallaxBackground({ scrollOffset }: ParallaxBackgroundP
     transform: [{ translateY: scrollOffset.value * 0.6 }],
   }));
 
+  const gradientProps = useAnimatedProps<LinearGradientProps>(() => {
+    const top = interpolateColor(scrollOffset.value, [0, 5000], ['#87CEEB', '#0b0d23']);
+    const mid = interpolateColor(scrollOffset.value, [0, 5000], ['#4682B4', '#0a0a1a']);
+    return { colors: [top, mid, '#1a1a2e'] as [string, string, string] };
+  });
+
   return (
     <View style={styles.container}>
       {/* Sky Gradient */}
       <Animated.View style={[styles.skyLayer, skyAnimatedStyle]}>
-        <LinearGradient
+        <AnimatedLinearGradient
           colors={['#87CEEB', '#4682B4', '#1a1a2e']}
+          animatedProps={gradientProps}
           style={styles.gradient}
         />
       </Animated.View>

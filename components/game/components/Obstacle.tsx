@@ -76,6 +76,10 @@ export default function Obstacle({ obstacle }: ObstacleProps) {
     }
   };
 
+  if (!obstacle.active.value) {
+    return null;
+  }
+
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
       {renderObstacle()}

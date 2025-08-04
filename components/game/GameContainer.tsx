@@ -21,12 +21,14 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GROUND_LEVEL =
   SCREEN_HEIGHT - GameConfig.PLAYER_SIZE - GameConfig.GROUND_OFFSET;
 const TARGET_HEIGHT = SCREEN_HEIGHT * GameConfig.TARGET_HEIGHT_RATIO;
+const MAX_OBSTACLES = 20;
+const MAX_COINS = 20;
 
 export default function GameContainer() {
   const [gameState, setGameState] = useState<GameState>('start');
-  const [score, setScore] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [distance, setDistance] = useState(0);
+  const [scoreState, setScoreState] = useState(0);
+  const [coinsState, setCoinsState] = useState(0);
+  const [distanceState, setDistanceState] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
 
@@ -42,15 +44,22 @@ export default function GameContainer() {
   const hasStarted = useSharedValue(false);
   const hasLiftedOff = useSharedValue(false);
 
+  const score = useSharedValue(0);
+  const coins = useSharedValue(0);
+  const distance = useSharedValue(0);
+
   const obstacles = useSharedValue<ObstacleType[]>([]);
   // Coins that are currently active in the game world
   const coinsList = useSharedValue<CoinType[]>([]);
 
   const startGame = () => {
     setGameState('playing');
-    setScore(0);
-    setCoins(0);
-    setDistance(0);
+    setScoreState(0);
+    setCoinsState(0);
+    setDistanceState(0);
+    score.value = 0;
+    coins.value = 0;
+    distance.value = 0;
     playerY.value = GROUND_LEVEL;
     playerX.value = SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2;
     playerVelocity.value = 0;
@@ -60,8 +69,22 @@ export default function GameContainer() {
     hasStarted.value = false;
     hasLiftedOff.value = false;
     lastTimeRef.current = 0;
-    obstacles.value = [];
-    coinsList.value = [];
+    obstacles.value = Array.from({ length: MAX_OBSTACLES }, (_, i) => ({
+      id: `obstacle-${i}`,
+      type: 'platform',
+      x: makeMutable(-100),
+      y: makeMutable(-100),
+      width: 40,
+      height: 40,
+      active: makeMutable(false),
+    }));
+    coinsList.value = Array.from({ length: MAX_COINS }, (_, i) => ({
+      id: `coin-${i}`,
+      x: makeMutable(-100),
+      y: makeMutable(-100),
+      collected: makeMutable(false),
+      active: makeMutable(false),
+    }));
     startGameLoop();
   };
 
@@ -72,11 +95,18 @@ export default function GameContainer() {
     }
     hasStarted.value = false;
 
-    const newRecord = score > highScore;
+    const finalScore = Math.floor(score.value);
+    const finalCoins = Math.floor(coins.value);
+    const finalDistance = Math.floor(distance.value);
+    setScoreState(finalScore);
+    setCoinsState(finalCoins);
+    setDistanceState(finalDistance);
+
+    const newRecord = finalScore > highScore;
     setIsNewRecord(newRecord);
 
     if (newRecord) {
-      setHighScore(score);
+      setHighScore(finalScore);
     }
   };
 
@@ -176,25 +206,31 @@ export default function GameContainer() {
 
     // Update and spawn obstacles
     obstacles.value.forEach((o) => {
+      if (!o.active.value) return;
       o.y.value += GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds;
+      if (o.y.value > SCREEN_HEIGHT) {
+        o.active.value = false;
+      }
     });
-    obstacles.value = obstacles.value.filter((o) => o.y.value < SCREEN_HEIGHT);
     if (Math.random() < GameConfig.OBSTACLE_SPAWN_RATE * difficulty) {
-      const width = 40;
-      const height = 100;
-      const xPos = Math.random() * (SCREEN_WIDTH - width);
-      obstacles.value.push({
-        id: Date.now().toString(),
-        type: 'platform',
-        x: makeMutable(xPos),
-        y: makeMutable(-height),
-        width,
-        height,
-      });
+      const idx = obstacles.value.findIndex((o) => !o.active.value);
+      if (idx !== -1) {
+        const width = 40;
+        const height = 100;
+        const xPos = Math.random() * (SCREEN_WIDTH - width);
+        const obstacle = obstacles.value[idx];
+        obstacle.type = 'platform';
+        obstacle.x.value = xPos;
+        obstacle.y.value = -height;
+        obstacle.width = width;
+        obstacle.height = height;
+        obstacle.active.value = true;
+      }
     }
 
     // Collision detection between player and obstacles
     for (const o of obstacles.value) {
+      if (!o.active.value) continue;
       const collision =
         playerHitbox.x < o.x.value + o.width &&
         playerHitbox.x + playerHitbox.width > o.x.value &&
@@ -208,36 +244,41 @@ export default function GameContainer() {
 
     // Update and spawn coins
     coinsList.value.forEach((c) => {
+      if (!c.active.value) return;
       c.y.value += GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds;
+      if (c.y.value > SCREEN_HEIGHT || c.collected.value) {
+        c.active.value = false;
+      }
     });
-    coinsList.value = coinsList.value.filter(
-      (c) => c.y.value < SCREEN_HEIGHT && !c.collected.value,
-    );
     if (Math.random() < GameConfig.COIN_SPAWN_RATE) {
-      const xPos = Math.random() * (SCREEN_WIDTH - GameConfig.COIN_SIZE);
-      coinsList.value.push({
-        id: `coin-${Date.now().toString()}`,
-        x: makeMutable(xPos),
-        y: makeMutable(-GameConfig.COIN_SIZE * 2),
-        collected: makeMutable(false),
-      });
+      const idx = coinsList.value.findIndex((c) => !c.active.value);
+      if (idx !== -1) {
+        const coin = coinsList.value[idx];
+        const xPos = Math.random() * (SCREEN_WIDTH - GameConfig.COIN_SIZE);
+        coin.x.value = xPos;
+        coin.y.value = -GameConfig.COIN_SIZE * 2;
+        coin.collected.value = false;
+        coin.active.value = true;
+      }
     }
     for (const c of coinsList.value) {
+      if (!c.active.value || c.collected.value) continue;
       const collected =
         playerHitbox.x < c.x.value + GameConfig.COIN_SIZE &&
         playerHitbox.x + playerHitbox.width > c.x.value &&
         playerHitbox.y < c.y.value + GameConfig.COIN_SIZE &&
         playerHitbox.y + playerHitbox.height > c.y.value;
-      if (collected && !c.collected.value) {
+      if (collected) {
         c.collected.value = true;
-        runOnJS(setCoins)((prev) => prev + 1);
+        c.active.value = false;
+        coins.value += 1;
       }
     }
 
     // Update distance and score
     const distanceIncrement = GameConfig.SCROLL_SPEED * deltaSeconds * 0.1;
-    runOnJS(setDistance)((prev) => prev + distanceIncrement);
-    runOnJS(setScore)((prev) => prev + Math.floor(distanceIncrement * 10));
+    distance.value += distanceIncrement;
+    score.value += Math.floor(distanceIncrement * 10);
   };
 
   const panGesture = Gesture.Pan()
@@ -311,7 +352,7 @@ export default function GameContainer() {
               scrollOffset={scrollOffset}
               score={score}
               coins={coins}
-              distance={Math.floor(distance)}
+              distance={distance}
               isJetpackActive={isJetpackActive}
               obstacles={obstacles}
               coinsList={coinsList}
@@ -322,9 +363,9 @@ export default function GameContainer() {
 
       {gameState === 'gameOver' && (
         <GameOverScreen
-          score={score}
-          coins={coins}
-          distance={Math.floor(distance)}
+          score={scoreState}
+          coins={coinsState}
+          distance={Math.floor(distanceState)}
           highScore={highScore}
           isNewRecord={isNewRecord}
           onRestart={restartGame}

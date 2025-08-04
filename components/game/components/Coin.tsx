@@ -40,7 +40,7 @@ export default function Coin({ coin }: CoinProps) {
     ],
   }));
 
-  if (coin.collected.value) {
+  if (!coin.active.value || coin.collected.value) {
     return null;
   }
 

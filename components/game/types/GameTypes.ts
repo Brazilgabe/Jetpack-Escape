@@ -10,6 +10,7 @@ export interface Obstacle {
   width: number;
   height: number;
   speed?: number;
+  active: SharedValue<boolean>;
 }
 
 export interface Coin {
@@ -17,6 +18,7 @@ export interface Coin {
   x: SharedValue<number>;
   y: SharedValue<number>;
   collected: SharedValue<boolean>;
+  active: SharedValue<boolean>;
 }
 
 export interface PowerUp {
@@ -56,9 +58,9 @@ export const GameConfig = {
 export interface GameProps {
   playerAnimatedStyle: any;
   scrollOffset: any;
-  score: number;
-  coins: number;
-  distance: number;
+  score: SharedValue<number>;
+  coins: SharedValue<number>;
+  distance: SharedValue<number>;
   isJetpackActive: any;
   obstacles: SharedValue<Obstacle[]>;
   // Coins currently on screen

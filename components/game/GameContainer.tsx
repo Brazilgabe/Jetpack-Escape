@@ -268,6 +268,8 @@ export default function GameContainer() {
     })
     .onEnd(() => {
       isJetpackActive.value = false;
+      // Reset upward velocity so gravity takes effect immediately
+      playerVelocity.value = Math.max(playerVelocity.value, 0);
     });
 
   const tapGesture = Gesture.Tap()
@@ -280,6 +282,8 @@ export default function GameContainer() {
     .onTouchesUp(() => {
       controlDirection.value = 0;
       isJetpackActive.value = false;
+      // Reset upward velocity when jetpack is released
+      playerVelocity.value = Math.max(playerVelocity.value, 0);
     });
 
   const combinedGesture = Gesture.Race(panGesture, tapGesture);

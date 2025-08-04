@@ -88,13 +88,18 @@ export default function GameContainer() {
   };
 
   const startGameLoop = () => {
+    const FRAME_DURATION = 1000 / 60;
     lastTimeRef.current = performance.now();
-    const gameLoop = (currentTime: number) => {
-      const deltaTime = currentTime - lastTimeRef.current;
-      lastTimeRef.current = currentTime;
+    let accumulator = 0;
 
-      if (deltaTime > 0) {
-        updateGame(deltaTime);
+    const gameLoop = (currentTime: number) => {
+      const deltaTime = Math.min(currentTime - lastTimeRef.current, 100);
+      lastTimeRef.current = currentTime;
+      accumulator += deltaTime;
+
+      while (accumulator >= FRAME_DURATION) {
+        updateGame(FRAME_DURATION / 1000);
+        accumulator -= FRAME_DURATION;
       }
 
       gameLoopRef.current = requestAnimationFrame(gameLoop);
@@ -103,39 +108,42 @@ export default function GameContainer() {
     gameLoopRef.current = requestAnimationFrame(gameLoop);
   };
 
-  const updateGame = (deltaTime: number) => {
+  const updateGame = (deltaSeconds: number) => {
     const gravity = GameConfig.GRAVITY;
-    const ascentSpeed = GameConfig.JETPACK_ASCENT_SPEED;
-    const deltaSeconds = deltaTime / 1000;
+    const jetpackForce = GameConfig.JETPACK_FORCE;
 
-    // Keep the player grounded until jetpack activation
-    if (!isJetpackActive.value && playerY.value >= GROUND_LEVEL) {
+    // Vertical physics
+    if (!hasStarted.value && playerY.value >= GROUND_LEVEL) {
+      // Keep the player grounded before the first input
       playerY.value = GROUND_LEVEL;
       playerVelocity.value = 0;
     } else {
       if (isJetpackActive.value) {
-        // Move upward toward the target height
-        if (playerY.value > TARGET_HEIGHT) {
-          playerVelocity.value = -ascentSpeed;
-          playerY.value += playerVelocity.value * deltaSeconds;
-          if (playerY.value < TARGET_HEIGHT) {
-            playerY.value = TARGET_HEIGHT;
-            playerVelocity.value = 0;
-          }
-        } else {
-          playerY.value = TARGET_HEIGHT;
-          playerVelocity.value = 0;
-        }
+        playerVelocity.value -= jetpackForce * deltaSeconds;
       } else {
-        // Apply gravity when jetpack is inactive
         playerVelocity.value += gravity * deltaSeconds;
-        playerY.value += playerVelocity.value * deltaSeconds;
-        if (playerY.value >= GROUND_LEVEL) {
-          playerY.value = GROUND_LEVEL;
-          playerVelocity.value = 0;
-          runOnJS(gameOver)();
-          return;
-        }
+      }
+
+      // Cap vertical speed for stability
+      playerVelocity.value = Math.max(
+        -GameConfig.MAX_VELOCITY,
+        Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value),
+      );
+
+      playerY.value += playerVelocity.value * deltaSeconds;
+
+      // Clamp height to target
+      if (playerY.value < TARGET_HEIGHT) {
+        playerY.value = TARGET_HEIGHT;
+        playerVelocity.value = Math.max(playerVelocity.value, 0);
+      }
+
+      // Ground collision after the game has started
+      if (playerY.value >= GROUND_LEVEL) {
+        playerY.value = GROUND_LEVEL;
+        playerVelocity.value = 0;
+        runOnJS(gameOver)();
+        return;
       }
     }
 

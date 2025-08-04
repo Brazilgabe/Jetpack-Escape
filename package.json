@@ -45,6 +45,9 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
+    "metro": "^0.81.0",
+    "metro-config": "^0.81.0",
+    "metro-runtime": "^0.81.0",
     "typescript": "~5.8.3"
   }
 }

@@ -35,6 +35,7 @@ export default function GameContainer() {
     playerY.value = SCREEN_HEIGHT / 2;
     playerVelocity.value = 0;
     scrollOffset.value = 0;
+    lastTimeRef.current = 0;
     startGameLoop();
   };
 
@@ -54,17 +55,18 @@ export default function GameContainer() {
   };
 
   const startGameLoop = () => {
+    lastTimeRef.current = performance.now();
     const gameLoop = (currentTime: number) => {
       const deltaTime = currentTime - lastTimeRef.current;
       lastTimeRef.current = currentTime;
-      
+
       if (deltaTime > 0) {
         updateGame(deltaTime);
       }
-      
+
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
-    
+
     gameLoopRef.current = requestAnimationFrame(gameLoop);
   };
 
@@ -72,18 +74,19 @@ export default function GameContainer() {
     // Apply gravity and jetpack physics
     const gravity = GameConfig.GRAVITY;
     const jetpackForce = GameConfig.JETPACK_FORCE;
+    const deltaSeconds = deltaTime / 1000;
     
     if (isJetpackActive.value) {
-      playerVelocity.value += jetpackForce * deltaTime * 0.001;
+      playerVelocity.value += jetpackForce * deltaSeconds;
     } else {
-      playerVelocity.value -= gravity * deltaTime * 0.001;
+      playerVelocity.value -= gravity * deltaSeconds;
     }
     
     // Limit velocity
     playerVelocity.value = Math.max(-15, Math.min(15, playerVelocity.value));
-    
+
     // Update player position
-    playerY.value += playerVelocity.value;
+    playerY.value += playerVelocity.value * deltaSeconds;
     
     // Check boundaries
     if (playerY.value < 0 || playerY.value > SCREEN_HEIGHT - 60) {
@@ -92,10 +95,10 @@ export default function GameContainer() {
     }
     
     // Update scroll offset for background
-    scrollOffset.value += GameConfig.SCROLL_SPEED * deltaTime * 0.001;
+    scrollOffset.value += GameConfig.SCROLL_SPEED * deltaSeconds;
     
     // Update distance and score
-    const distanceIncrement = GameConfig.SCROLL_SPEED * deltaTime * 0.0001;
+    const distanceIncrement = GameConfig.SCROLL_SPEED * deltaSeconds * 0.1;
     runOnJS(setDistance)(prev => prev + distanceIncrement);
     runOnJS(setScore)(prev => prev + Math.floor(distanceIncrement * 10));
   };

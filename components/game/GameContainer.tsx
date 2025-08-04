@@ -17,6 +17,7 @@ import {
 } from './types/GameTypes';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const GROUND_LEVEL = SCREEN_HEIGHT - GameConfig.PLAYER_SIZE;
 
 export default function GameContainer() {
   const [gameState, setGameState] = useState<GameState>('start');
@@ -28,7 +29,7 @@ export default function GameContainer() {
   
   const gameLoopRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
-  const playerY = useSharedValue(SCREEN_HEIGHT / 2);
+  const playerY = useSharedValue(GROUND_LEVEL);
   const playerX = useSharedValue(
     SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2,
   );
@@ -49,9 +50,11 @@ export default function GameContainer() {
     setScore(0);
     setCoins(0);
     setDistance(0);
-    playerY.value = SCREEN_HEIGHT / 2;
+    playerY.value = GROUND_LEVEL;
     playerX.value = SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2;
     playerVelocity.value = 0;
+    isJetpackActive.value = false;
+    controlDirection.value = 0;
     scrollOffset.value = 0;
     lastTimeRef.current = 0;
     obstaclesRef.current = [];
@@ -96,26 +99,42 @@ export default function GameContainer() {
   };
 
   const updateGame = (deltaTime: number) => {
-    // Apply gravity and jetpack physics
     const gravity = GameConfig.GRAVITY;
     const jetpackForce = GameConfig.JETPACK_FORCE;
     const deltaSeconds = deltaTime / 1000;
 
-    // Apply thrust when the jetpack is active, otherwise let gravity pull
-    if (isJetpackActive.value) {
-      playerVelocity.value -= jetpackForce * deltaSeconds;
+    // Keep the player grounded until jetpack activation
+    if (!isJetpackActive.value && playerY.value >= GROUND_LEVEL) {
+      playerY.value = GROUND_LEVEL;
+      playerVelocity.value = 0;
     } else {
-      playerVelocity.value += gravity * deltaSeconds;
+      // Apply thrust when the jetpack is active, otherwise let gravity pull
+      if (isJetpackActive.value) {
+        playerVelocity.value -= jetpackForce * deltaSeconds;
+      } else {
+        playerVelocity.value += gravity * deltaSeconds;
+      }
+
+      // Limit velocity based on GameConfig.MAX_VELOCITY
+      playerVelocity.value = Math.max(
+        -GameConfig.MAX_VELOCITY,
+        Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value)
+      );
+
+      // Update player vertical position
+      playerY.value += playerVelocity.value * deltaSeconds;
+
+      // Check collision with ground or ceiling
+      if (playerY.value >= GROUND_LEVEL) {
+        playerY.value = GROUND_LEVEL;
+        runOnJS(gameOver)();
+        return;
+      }
+      if (playerY.value < 0) {
+        runOnJS(gameOver)();
+        return;
+      }
     }
-    
-    // Limit velocity based on GameConfig.MAX_VELOCITY
-    playerVelocity.value = Math.max(
-      -GameConfig.MAX_VELOCITY,
-      Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value)
-    );
-    
-    // Update player vertical position
-    playerY.value += playerVelocity.value * deltaSeconds;
 
     // Update horizontal movement based on touch direction
     playerX.value +=
@@ -124,12 +143,6 @@ export default function GameContainer() {
       0,
       Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value),
     );
-    
-    // Check boundaries
-    if (playerY.value < 0 || playerY.value > SCREEN_HEIGHT - 60) {
-      runOnJS(gameOver)();
-      return;
-    }
     
     // Update scroll offset for background
     scrollOffset.value += GameConfig.SCROLL_SPEED * deltaSeconds;

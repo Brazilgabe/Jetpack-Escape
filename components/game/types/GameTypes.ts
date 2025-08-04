@@ -30,10 +30,12 @@ export const GameConfig = {
   GRAVITY: 800,
   JETPACK_FORCE: 1200,
   SCROLL_SPEED: 200,
+  HORIZONTAL_SPEED: 300,
   PLAYER_SIZE: 60,
   COIN_SIZE: 30,
   MAX_VELOCITY: 15,
   OBSTACLE_SPAWN_RATE: 0.02,
+  OBSTACLE_SPEED: 150,
   COIN_SPAWN_RATE: 0.03,
 };
 
@@ -44,4 +46,5 @@ export interface GameProps {
   coins: number;
   distance: number;
   isJetpackActive: any;
+  obstacles: Obstacle[];
 }

@@ -5,6 +5,7 @@ import Player from '@/components/game/components/Player';
 import GameHUD from '@/components/game/components/GameHUD';
 import { GameProps } from '@/components/game/types/GameTypes';
 import Obstacle from '@/components/game/components/Obstacle';
+import Coin from '@/components/game/components/Coin';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -16,6 +17,7 @@ export default function GameScreen({
   distance,
   isJetpackActive,
   obstacles,
+  coinsList,
 }: GameProps) {
   return (
     <View style={styles.container}>
@@ -24,6 +26,9 @@ export default function GameScreen({
       <View style={styles.gameArea}>
         {obstacles.map(obstacle => (
           <Obstacle key={obstacle.id} obstacle={obstacle} />
+        ))}
+        {coinsList.map(coin => (
+          <Coin key={coin.id} coin={coin} />
         ))}
         <Player
           animatedStyle={playerAnimatedStyle}

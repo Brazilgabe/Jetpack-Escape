@@ -1,10 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import JetpackFlame from '@/components/game/components/JetpackFlame';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface PlayerProps {
   animatedStyle: any;
@@ -52,13 +50,12 @@ export default function Player({ animatedStyle, isJetpackActive }: PlayerProps) 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 50,
     zIndex: 3,
   },
   flameContainer: {
     position: 'absolute',
-    bottom: -30,
-    left: 10,
+    bottom: -35,
+    left: 15,
     zIndex: -1,
   },
   player: {

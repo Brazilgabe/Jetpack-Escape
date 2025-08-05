@@ -16,25 +16,32 @@ export default function GameScreen({
   isJetpackActive,
   obstacles,
   coinsList,
+  hudScore,
+  hudCoins,
+  hudDistance,
 }: GameProps) {
   return (
     <View style={styles.container}>
       <ParallaxBackground scrollOffset={scrollOffset} />
 
       <View style={styles.gameArea}>
-        {obstacles.value.map((obstacle) => (
+        {/* {obstacles?.map((obstacle) => (
           <Obstacle key={obstacle.id} obstacle={obstacle} />
         ))}
-        {coinsList.value.map((coin) => (
+        {coinsList?.map((coin) => (
           <Coin key={coin.id} coin={coin} />
-        ))}
+        ))} */}
         <Player
           animatedStyle={playerAnimatedStyle}
           isJetpackActive={isJetpackActive}
         />
       </View>
 
-      <GameHUD score={score} coins={coins} distance={distance} />
+      <GameHUD 
+        scoreValue={hudScore || 0}
+        coinsValue={hudCoins || 0}
+        distanceValue={hudDistance || 0}
+      />
     </View>
   );
 }

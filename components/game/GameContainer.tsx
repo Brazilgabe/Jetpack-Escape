@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useDerivedValue,
+  withSpring,
+  withTiming,
+  useAnimatedReaction,
   runOnJS,
-  makeMutable,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import StartScreen from '@/components/game/screens/StartScreen';
@@ -17,23 +20,31 @@ import {
   Coin as CoinType,
 } from './types/GameTypes';
 
+
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const GROUND_LEVEL =
-  SCREEN_HEIGHT - GameConfig.PLAYER_SIZE - GameConfig.GROUND_OFFSET;
+const GROUND_LEVEL = SCREEN_HEIGHT - GameConfig.PLAYER_SIZE - GameConfig.GROUND_OFFSET;
 const TARGET_HEIGHT = SCREEN_HEIGHT * GameConfig.TARGET_HEIGHT_RATIO;
-const MAX_OBSTACLES = 20;
-const MAX_COINS = 20;
+
+// Helper function to create SharedValue objects outside of hooks
+const createSharedValue = (value: number) => {
+  const sharedValue = { value };
+  return sharedValue;
+};
+
+const createBooleanSharedValue = (value: boolean) => {
+  const sharedValue = { value };
+  return sharedValue;
+};
 
 export default function GameContainer() {
   const [gameState, setGameState] = useState<GameState>('start');
-  const [scoreState, setScoreState] = useState(0);
-  const [coinsState, setCoinsState] = useState(0);
-  const [distanceState, setDistanceState] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
 
   const gameLoopRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
+
   const playerY = useSharedValue(GROUND_LEVEL);
   const playerX = useSharedValue(SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2);
   const playerVelocity = useSharedValue(0);
@@ -48,15 +59,65 @@ export default function GameContainer() {
   const coins = useSharedValue(0);
   const distance = useSharedValue(0);
 
-  const obstacles = useSharedValue<ObstacleType[]>([]);
-  // Coins that are currently active in the game world
-  const coinsList = useSharedValue<CoinType[]>([]);
+  const obstaclesRef = useRef<ObstacleType[]>([]);
+  const coinsRef = useRef<CoinType[]>([]);
+  const [obstacles, setObstacles] = useState<ObstacleType[]>([]);
+  const [coinsList, setCoinsList] = useState<CoinType[]>([]);
+  const [finalScore, setFinalScore] = useState(0);
+  const [finalCoins, setFinalCoins] = useState(0);
+  const [finalDistance, setFinalDistance] = useState(0);
+  const [hudScore, setHudScore] = useState(0);
+  const [hudCoins, setHudCoins] = useState(0);
+  const [hudDistance, setHudDistance] = useState(0);
 
-  const startGame = () => {
+  // Smooth player movement with spring animation
+  const displayY = useDerivedValue(() => 
+    withSpring(playerY.value, { 
+      damping: 15, 
+      stiffness: 100,
+      mass: 0.8 
+    })
+  );
+
+  // Optimized reactions
+  useAnimatedReaction(
+    () => Math.floor(scrollOffset.value / 10),
+    (val) => {
+      distance.value = withTiming(val, { duration: 100 });
+    }
+  );
+
+  useAnimatedReaction(
+    () => Math.floor(scrollOffset.value / 10),
+    (val) => {
+      score.value = withTiming(val * 10, { duration: 100 });
+    }
+  );
+
+  // Sync SharedValues to React state for HUD
+  useAnimatedReaction(
+    () => score.value,
+    (value) => {
+      runOnJS(setHudScore)(Math.floor(value));
+    }
+  );
+
+  useAnimatedReaction(
+    () => coins.value,
+    (value) => {
+      runOnJS(setHudCoins)(Math.floor(value));
+    }
+  );
+
+  useAnimatedReaction(
+    () => distance.value,
+    (value) => {
+      runOnJS(setHudDistance)(Math.floor(value));
+    }
+  );
+
+  const startGame = useCallback(() => {
     setGameState('playing');
-    setScoreState(0);
-    setCoinsState(0);
-    setDistanceState(0);
     score.value = 0;
     coins.value = 0;
     distance.value = 0;
@@ -68,109 +129,58 @@ export default function GameContainer() {
     scrollOffset.value = 0;
     hasStarted.value = false;
     hasLiftedOff.value = false;
-    lastTimeRef.current = 0;
-    obstacles.value = Array.from({ length: MAX_OBSTACLES }, (_, i) => ({
-      id: `obstacle-${i}`,
-      type: 'platform',
-      x: makeMutable(-100),
-      y: makeMutable(-100),
-      width: 40,
-      height: 40,
-      active: makeMutable(false),
-    }));
-    coinsList.value = Array.from({ length: MAX_COINS }, (_, i) => ({
-      id: `coin-${i}`,
-      x: makeMutable(-100),
-      y: makeMutable(-100),
-      collected: makeMutable(false),
-      active: makeMutable(false),
-    }));
-    startGameLoop();
-  };
-
-  const gameOver = () => {
-    setGameState('gameOver');
-    if (gameLoopRef.current) {
-      cancelAnimationFrame(gameLoopRef.current);
-    }
-    hasStarted.value = false;
-
-    const finalScore = Math.floor(score.value);
-    const finalCoins = Math.floor(coins.value);
-    const finalDistance = Math.floor(distance.value);
-    setScoreState(finalScore);
-    setCoinsState(finalCoins);
-    setDistanceState(finalDistance);
-
-    const newRecord = finalScore > highScore;
-    setIsNewRecord(newRecord);
-
-    if (newRecord) {
-      setHighScore(finalScore);
-    }
-  };
-
-  const restartGame = () => {
-    setGameState('start');
-  };
-
-  const startGameLoop = () => {
-    const FRAME_DURATION = 1000 / 60;
     lastTimeRef.current = performance.now();
-    let accumulator = 0;
+    obstaclesRef.current = [];
+    coinsRef.current = [];
+    setObstacles([]);
+    setCoinsList([]);
+    startGameLoop();
+  }, []);
 
-    const gameLoop = (currentTime: number) => {
-      const deltaTime = Math.min(currentTime - lastTimeRef.current, 100);
-      lastTimeRef.current = currentTime;
-      accumulator += deltaTime;
+  const gameOver = useCallback(() => {
+    setGameState('gameOver');
+    if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
+    hasStarted.value = false;
+    const newRecord = score.value > highScore;
+    setIsNewRecord(newRecord);
+    setFinalScore(Math.floor(score.value));
+    setFinalCoins(Math.floor(coins.value));
+    setFinalDistance(Math.floor(distance.value));
+    if (newRecord) setHighScore(score.value);
+  }, [highScore]);
 
-      while (accumulator >= FRAME_DURATION) {
-        updateGame(FRAME_DURATION / 1000);
-        accumulator -= FRAME_DURATION;
-      }
+  const restartGame = useCallback(() => setGameState('start'), []);
 
-      gameLoopRef.current = requestAnimationFrame(gameLoop);
+  const startGameLoop = useCallback(() => {
+    lastTimeRef.current = performance.now();
+    const loop = (time: number) => {
+      const dt = (time - lastTimeRef.current) / 1000;
+      lastTimeRef.current = time;
+      updateGame(dt);
+      gameLoopRef.current = requestAnimationFrame(loop);
     };
+    gameLoopRef.current = requestAnimationFrame(loop);
+  }, []);
 
-    gameLoopRef.current = requestAnimationFrame(gameLoop);
-  };
-
-  const updateGame = (deltaSeconds: number) => {
+  const updateGame = useCallback((dt: number) => {
     const gravity = GameConfig.GRAVITY;
     const jetpackForce = GameConfig.JETPACK_FORCE;
 
-    // Vertical physics
     if (!hasStarted.value && playerY.value >= GROUND_LEVEL) {
-      // Keep the player grounded before the first input
       playerY.value = GROUND_LEVEL;
       playerVelocity.value = 0;
     } else {
-      if (isJetpackActive.value) {
-        playerVelocity.value -= jetpackForce * deltaSeconds;
-      } else {
-        playerVelocity.value += gravity * deltaSeconds;
-      }
+      if (isJetpackActive.value) playerVelocity.value -= jetpackForce * dt;
+      else playerVelocity.value += gravity * dt;
 
-      // Cap vertical speed for stability
-      playerVelocity.value = Math.max(
-        -GameConfig.MAX_VELOCITY,
-        Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value),
-      );
-
-      playerY.value += playerVelocity.value * deltaSeconds;
-
-      if (playerY.value < GROUND_LEVEL) {
-        hasLiftedOff.value = true;
-      }
-
-      // Clamp height to target
+      playerVelocity.value = Math.max(-GameConfig.MAX_VELOCITY, Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value));
+      playerY.value += playerVelocity.value * dt;
+      if (playerY.value < GROUND_LEVEL) hasLiftedOff.value = true;
       if (playerY.value < TARGET_HEIGHT) {
         playerY.value = TARGET_HEIGHT;
         playerVelocity.value = Math.max(playerVelocity.value, 0);
       }
-
-      // Ground collision after the game has started
-      if (hasLiftedOff.value && playerY.value >= GROUND_LEVEL) {
+      if (hasLiftedOff.value && playerY.value >= GROUND_LEVEL && playerVelocity.value >= 0) {
         playerY.value = GROUND_LEVEL;
         playerVelocity.value = 0;
         runOnJS(gameOver)();
@@ -178,172 +188,118 @@ export default function GameContainer() {
       }
     }
 
-    // Update horizontal movement based on touch direction
-    playerX.value +=
-      controlDirection.value * GameConfig.HORIZONTAL_SPEED * deltaSeconds;
-    playerX.value = Math.max(
-      0,
-      Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value),
-    );
+    playerX.value += controlDirection.value * GameConfig.HORIZONTAL_SPEED * dt;
+    playerX.value = Math.max(0, Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value));
+    if (!hasStarted.value) return;
+    scrollOffset.value += GameConfig.SCROLL_SPEED * dt;
 
-    if (!hasStarted.value) {
-      return;
+    // Update obstacles with optimized logic
+    let obs = obstaclesRef.current.map(o => ({ 
+      ...o, 
+      y: { ...o.y, value: o.y.value + GameConfig.OBSTACLE_SPEED * dt } 
+    }));
+    obs = obs.filter(o => o.y.value < SCREEN_HEIGHT);
+    if (Math.random() < GameConfig.OBSTACLE_SPAWN_RATE) {
+      const width = 40;
+      const height = 100;
+      const x = Math.random() * (SCREEN_WIDTH - width);
+      const newObstacle: ObstacleType = {
+        id: Date.now().toString(),
+        type: 'platform',
+        x: createSharedValue(x),
+        y: createSharedValue(-height),
+        width,
+        height,
+        active: createBooleanSharedValue(true)
+      };
+      obs.push(newObstacle);
     }
+    obstaclesRef.current = obs;
+    runOnJS(setObstacles)(obs);
 
-    // Update scroll offset for background
-    scrollOffset.value += GameConfig.SCROLL_SPEED * deltaSeconds;
-
-    // Difficulty scales with distance travelled
-    const difficulty = 1 + scrollOffset.value / GameConfig.DIFFICULTY_DISTANCE;
-
-    // Calculate player hitbox for precise collision detection
-    const playerHitbox = {
-      x: playerX.value + GameConfig.PLAYER_HITBOX.offsetX,
-      y: playerY.value + GameConfig.PLAYER_HITBOX.offsetY,
-      width: GameConfig.PLAYER_HITBOX.width,
-      height: GameConfig.PLAYER_HITBOX.height,
-    };
-
-    // Update and spawn obstacles
-    obstacles.value.forEach((o) => {
-      if (!o.active.value) return;
-      o.y.value += GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds;
-      if (o.y.value > SCREEN_HEIGHT) {
-        o.active.value = false;
-      }
-    });
-    if (Math.random() < GameConfig.OBSTACLE_SPAWN_RATE * difficulty) {
-      const idx = obstacles.value.findIndex((o) => !o.active.value);
-      if (idx !== -1) {
-        const width = 40;
-        const height = 100;
-        const xPos = Math.random() * (SCREEN_WIDTH - width);
-        const obstacle = obstacles.value[idx];
-        obstacle.type = 'platform';
-        obstacle.x.value = xPos;
-        obstacle.y.value = -height;
-        obstacle.width = width;
-        obstacle.height = height;
-        obstacle.active.value = true;
-      }
-    }
-
-    // Collision detection between player and obstacles
-    for (const o of obstacles.value) {
-      if (!o.active.value) continue;
-      const collision =
-        playerHitbox.x < o.x.value + o.width &&
-        playerHitbox.x + playerHitbox.width > o.x.value &&
-        playerHitbox.y < o.y.value + o.height &&
-        playerHitbox.y + playerHitbox.height > o.y.value;
-      if (collision) {
-        runOnJS(gameOver)();
-        return;
-      }
-    }
-
-    // Update and spawn coins
-    coinsList.value.forEach((c) => {
-      if (!c.active.value) return;
-      c.y.value += GameConfig.OBSTACLE_SPEED * difficulty * deltaSeconds;
-      if (c.y.value > SCREEN_HEIGHT || c.collected.value) {
-        c.active.value = false;
-      }
-    });
+    // Update coins with optimized logic
+    let coins = coinsRef.current.map(c => ({ 
+      ...c, 
+      y: { ...c.y, value: c.y.value + GameConfig.OBSTACLE_SPEED * dt } 
+    }));
+    coins = coins.filter(c => c.y.value < SCREEN_HEIGHT && !c.collected.value);
     if (Math.random() < GameConfig.COIN_SPAWN_RATE) {
-      const idx = coinsList.value.findIndex((c) => !c.active.value);
-      if (idx !== -1) {
-        const coin = coinsList.value[idx];
-        const xPos = Math.random() * (SCREEN_WIDTH - GameConfig.COIN_SIZE);
-        coin.x.value = xPos;
-        coin.y.value = -GameConfig.COIN_SIZE * 2;
-        coin.collected.value = false;
-        coin.active.value = true;
-      }
+      const x = Math.random() * (SCREEN_WIDTH - GameConfig.COIN_SIZE);
+      const newCoin: CoinType = {
+        id: `coin-${Date.now()}`,
+        x: createSharedValue(x),
+        y: createSharedValue(-GameConfig.COIN_SIZE * 2),
+        collected: createBooleanSharedValue(false),
+        active: createBooleanSharedValue(true)
+      };
+      coins.push(newCoin);
     }
-    for (const c of coinsList.value) {
-      if (!c.active.value || c.collected.value) continue;
-      const collected =
-        playerHitbox.x < c.x.value + GameConfig.COIN_SIZE &&
-        playerHitbox.x + playerHitbox.width > c.x.value &&
-        playerHitbox.y < c.y.value + GameConfig.COIN_SIZE &&
-        playerHitbox.y + playerHitbox.height > c.y.value;
-      if (collected) {
-        c.collected.value = true;
-        c.active.value = false;
-        coins.value += 1;
-      }
-    }
+    coinsRef.current = coins;
+    runOnJS(setCoinsList)(coins);
+  }, [gameOver]);
 
-    // Update distance and score
-    const distanceIncrement = GameConfig.SCROLL_SPEED * deltaSeconds * 0.1;
-    distance.value += distanceIncrement;
-    score.value += Math.floor(distanceIncrement * 10);
-  };
-
+  // Cross-platform gesture handling
   const panGesture = Gesture.Pan()
-    .onStart(() => {
+    .onStart((event) => {
       panStartX.value = playerX.value;
       isJetpackActive.value = true;
       controlDirection.value = 0;
       hasStarted.value = true;
+      // Only set hasLiftedOff if player is actually lifting off
+      if (playerY.value < GROUND_LEVEL) {
+        hasLiftedOff.value = true;
+      }
     })
     .onUpdate((event) => {
-      playerX.value = Math.max(
-        0,
-        Math.min(
-          SCREEN_WIDTH - GameConfig.PLAYER_SIZE,
-          panStartX.value + event.translationX,
-        ),
-      );
+      // Handle horizontal movement
+      playerX.value = Math.max(0, Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, panStartX.value + event.translationX));
+      
+      // Keep jetpack active while touching
+      isJetpackActive.value = true;
     })
     .onEnd(() => {
       isJetpackActive.value = false;
-      // Reset upward velocity so gravity takes effect immediately
       playerVelocity.value = Math.max(playerVelocity.value, 0);
     })
     .onFinalize(() => {
-      // Ensure jetpack is turned off if the gesture is cancelled
       isJetpackActive.value = false;
       playerVelocity.value = Math.max(playerVelocity.value, 0);
-    });
+    })
+    .minDistance(0)
+    .shouldCancelWhenOutside(false);
 
   const tapGesture = Gesture.Tap()
-    .onTouchesDown((e) => {
-      const touchX = e.allTouches[0].x;
-      controlDirection.value = touchX < SCREEN_WIDTH / 2 ? -1 : 1;
+    .onTouchesDown(() => {
       isJetpackActive.value = true;
       hasStarted.value = true;
+      // Only set hasLiftedOff if player is actually lifting off
+      if (playerY.value < GROUND_LEVEL) {
+        hasLiftedOff.value = true;
+      }
     })
     .onTouchesUp(() => {
-      controlDirection.value = 0;
       isJetpackActive.value = false;
-      // Reset upward velocity when jetpack is released
       playerVelocity.value = Math.max(playerVelocity.value, 0);
     })
     .onFinalize(() => {
-      // Safeguard to stop jetpack and horizontal movement
-      controlDirection.value = 0;
       isJetpackActive.value = false;
       playerVelocity.value = Math.max(playerVelocity.value, 0);
     });
 
   const combinedGesture = Gesture.Race(panGesture, tapGesture);
 
+  // Simplified animated style
   const playerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: playerX.value },
-      { translateY: playerY.value },
+      { translateX: withSpring(playerX.value, { damping: 20, stiffness: 200 }) },
+      { translateY: displayY.value },
       { rotate: '0deg' },
     ],
   }));
 
   return (
     <View style={styles.container}>
-      {gameState === 'start' && (
-        <StartScreen onStart={startGame} highScore={highScore} />
-      )}
-
+      {gameState === 'start' && <StartScreen onStart={startGame} highScore={highScore} />}
       {gameState === 'playing' && (
         <GestureDetector gesture={combinedGesture}>
           <View style={styles.gameArea}>
@@ -356,16 +312,18 @@ export default function GameContainer() {
               isJetpackActive={isJetpackActive}
               obstacles={obstacles}
               coinsList={coinsList}
+              hudScore={hudScore}
+              hudCoins={hudCoins}
+              hudDistance={hudDistance}
             />
           </View>
         </GestureDetector>
       )}
-
       {gameState === 'gameOver' && (
         <GameOverScreen
-          score={scoreState}
-          coins={coinsState}
-          distance={Math.floor(distanceState)}
+          score={finalScore}
+          coins={finalCoins}
+          distance={finalDistance}
           highScore={highScore}
           isNewRecord={isNewRecord}
           onRestart={restartGame}

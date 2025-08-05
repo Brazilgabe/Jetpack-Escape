@@ -5,20 +5,20 @@ import type { SharedValue } from 'react-native-reanimated';
 export interface Obstacle {
   id: string;
   type: 'platform' | 'blade' | 'laser' | 'bird';
-  x: SharedValue<number>;
-  y: SharedValue<number>;
+  x: { value: number };
+  y: { value: number };
   width: number;
   height: number;
   speed?: number;
-  active: SharedValue<boolean>;
+  active: { value: boolean };
 }
 
 export interface Coin {
   id: string;
-  x: SharedValue<number>;
-  y: SharedValue<number>;
-  collected: SharedValue<boolean>;
-  active: SharedValue<boolean>;
+  x: { value: number };
+  y: { value: number };
+  collected: { value: boolean };
+  active: { value: boolean };
 }
 
 export interface PowerUp {
@@ -32,7 +32,7 @@ export interface PowerUp {
 export const GameConfig = {
   GRAVITY: 800,
   JETPACK_FORCE: 2000,
-  SCROLL_SPEED: 200,
+  SCROLL_SPEED: 2000,
   HORIZONTAL_SPEED: 300,
   // Player positioning
   GROUND_OFFSET: 90,
@@ -62,7 +62,11 @@ export interface GameProps {
   coins: SharedValue<number>;
   distance: SharedValue<number>;
   isJetpackActive: any;
-  obstacles: SharedValue<Obstacle[]>;
+  obstacles: Obstacle[];
   // Coins currently on screen
-  coinsList: SharedValue<Coin[]>;
+  coinsList: Coin[];
+  // HUD values (optional for backward compatibility)
+  hudScore?: number;
+  hudCoins?: number;
+  hudDistance?: number;
 }

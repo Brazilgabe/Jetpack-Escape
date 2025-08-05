@@ -1,32 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, TextProps } from 'react-native';
-import Animated, { useAnimatedProps } from 'react-native-reanimated';
+import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Trophy, Coins, MapPin } from 'lucide-react-native';
-import type { SharedValue } from 'react-native-reanimated';
-
-interface AnimatedTextProps extends TextProps {
-  text?: string;
-}
-const AnimatedText = Animated.createAnimatedComponent<AnimatedTextProps>(Text);
 
 interface GameHUDProps {
-  score: SharedValue<number>;
-  coins: SharedValue<number>;
-  distance: SharedValue<number>;
+  scoreValue: number;
+  coinsValue: number;
+  distanceValue: number;
 }
 
-export default function GameHUD({ score, coins, distance }: GameHUDProps) {
-  const scoreProps = useAnimatedProps<AnimatedTextProps>(() => ({
-    text: score.value.toLocaleString(),
-  }));
-  const coinsProps = useAnimatedProps<AnimatedTextProps>(() => ({
-    text: coins.value.toString(),
-  }));
-  const distanceProps = useAnimatedProps<AnimatedTextProps>(() => ({
-    text: `${Math.floor(distance.value)}m`,
-  }));
-
+export default function GameHUD({ scoreValue, coinsValue, distanceValue }: GameHUDProps) {
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -37,17 +20,23 @@ export default function GameHUD({ score, coins, distance }: GameHUDProps) {
       <View style={styles.hudContainer}>
         <View style={styles.statItem}>
           <Trophy size={20} color="#ff6b6b" />
-          <AnimatedText style={styles.statValue} animatedProps={scoreProps} />
+          <Text style={styles.statValue}>
+            {scoreValue.toLocaleString()}
+          </Text>
         </View>
 
         <View style={styles.statItem}>
           <Coins size={20} color="#ffd93d" />
-          <AnimatedText style={styles.statValue} animatedProps={coinsProps} />
+          <Text style={styles.statValue}>
+            {coinsValue.toString()}
+          </Text>
         </View>
 
         <View style={styles.statItem}>
           <MapPin size={20} color="#4ecdc4" />
-          <AnimatedText style={styles.statValue} animatedProps={distanceProps} />
+          <Text style={styles.statValue}>
+            {`${Math.floor(distanceValue)}m`}
+          </Text>
         </View>
       </View>
     </View>

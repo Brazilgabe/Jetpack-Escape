@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Image } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import JetpackFlame from '@/components/game/components/JetpackFlame';
 
 interface PlayerProps {
@@ -10,7 +9,14 @@ interface PlayerProps {
 }
 
 export default function Player({ animatedStyle, isJetpackActive }: PlayerProps) {
-  const jetpackFlameStyle = useAnimatedStyle(() => ({
+  const leftFlameStyle = useAnimatedStyle(() => ({
+    opacity: isJetpackActive.value ? 1 : 0,
+    transform: [
+      { scaleY: isJetpackActive.value ? 1 : 0.3 },
+    ],
+  }));
+
+  const rightFlameStyle = useAnimatedStyle(() => ({
     opacity: isJetpackActive.value ? 1 : 0,
     transform: [
       { scaleY: isJetpackActive.value ? 1 : 0.3 },
@@ -19,30 +25,22 @@ export default function Player({ animatedStyle, isJetpackActive }: PlayerProps) 
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      {/* Jetpack Flame */}
-      <Animated.View style={[styles.flameContainer, jetpackFlameStyle]}>
+      {/* Character Image */}
+      <Image 
+        source={require('@/assets/characters/character-trump.png')}
+        style={styles.character}
+        resizeMode="contain"
+      />
+      
+      {/* Left Flame */}
+      <Animated.View style={[styles.leftFlameContainer, leftFlameStyle]}>
         <JetpackFlame />
       </Animated.View>
       
-      {/* Player Body */}
-      <View style={styles.player}>
-        <LinearGradient
-          colors={['#ff6b6b', '#ee5a24']}
-          style={styles.body}
-        />
-        
-        {/* Jetpack */}
-        <View style={styles.jetpack}>
-          <LinearGradient
-            colors={['#4a4a4a', '#2a2a2a']}
-            style={styles.jetpackBody}
-          />
-        </View>
-        
-        {/* Eyes */}
-        <View style={styles.eye} />
-        <View style={[styles.eye, styles.eyeRight]} />
-      </View>
+      {/* Right Flame */}
+      <Animated.View style={[styles.rightFlameContainer, rightFlameStyle]}>
+        <JetpackFlame />
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -51,47 +49,23 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     zIndex: 3,
+    width: 60,
+    height: 80,
   },
-  flameContainer: {
+  character: {
+    width: '100%',
+    height: '100%',
+  },
+  leftFlameContainer: {
     position: 'absolute',
-    bottom: -35,
+    bottom: -25,
     left: 15,
     zIndex: -1,
   },
-  player: {
-    width: 60,
-    height: 60,
-    position: 'relative',
-  },
-  body: {
-    width: 40,
-    height: 50,
-    borderRadius: 20,
+  rightFlameContainer: {
     position: 'absolute',
-    left: 10,
-    top: 5,
-  },
-  jetpack: {
-    position: 'absolute',
-    right: 0,
-    top: 15,
-    width: 20,
-    height: 30,
-  },
-  jetpackBody: {
-    flex: 1,
-    borderRadius: 10,
-  },
-  eye: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    backgroundColor: '#ffffff',
-    borderRadius: 4,
-    left: 18,
-    top: 15,
-  },
-  eyeRight: {
-    left: 28,
+    bottom: -25,
+    right: 15,
+    zIndex: -1,
   },
 });

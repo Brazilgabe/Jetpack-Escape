@@ -3,6 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedReaction,
+  runOnJS,
   withRepeat,
   withSequence,
   withTiming,
@@ -17,6 +19,8 @@ interface CoinProps {
 export default function Coin({ coin }: CoinProps) {
   const rotation = useSharedValue(0);
   const scale = useSharedValue(1);
+  const [isActive, setIsActive] = React.useState(true);
+  const [isCollected, setIsCollected] = React.useState(false);
 
   useEffect(() => {
     rotation.value = withRepeat(withTiming(360, { duration: 2000 }), -1, false);
@@ -31,6 +35,21 @@ export default function Coin({ coin }: CoinProps) {
     );
   }, []);
 
+  // Use useAnimatedReaction to sync active and collected states
+  useAnimatedReaction(
+    () => coin.active.value,
+    (value) => {
+      runOnJS(setIsActive)(value);
+    }
+  );
+
+  useAnimatedReaction(
+    () => coin.collected.value,
+    (value) => {
+      runOnJS(setIsCollected)(value);
+    }
+  );
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: coin.x.value },
@@ -40,7 +59,7 @@ export default function Coin({ coin }: CoinProps) {
     ],
   }));
 
-  if (!coin.active.value || coin.collected.value) {
+  if (!isActive || isCollected) {
     return null;
   }
 

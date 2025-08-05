@@ -6,12 +6,16 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  withDelay,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function JetpackFlame() {
   const flameScale = useSharedValue(1);
   const flameOpacity = useSharedValue(0.8);
+  const particle1Opacity = useSharedValue(0.7);
+  const particle2Opacity = useSharedValue(0.7);
+  const particle3Opacity = useSharedValue(0.7);
 
   useEffect(() => {
     flameScale.value = withRepeat(
@@ -33,11 +37,51 @@ export default function JetpackFlame() {
       -1,
       true
     );
+
+    // Animate particles with delays
+    particle1Opacity.value = withRepeat(
+      withDelay(0, withSequence(
+        withTiming(0, { duration: 500 }),
+        withTiming(0.7, { duration: 500 })
+      )),
+      -1,
+      true
+    );
+
+    particle2Opacity.value = withRepeat(
+      withDelay(100, withSequence(
+        withTiming(0, { duration: 500 }),
+        withTiming(0.7, { duration: 500 })
+      )),
+      -1,
+      true
+    );
+
+    particle3Opacity.value = withRepeat(
+      withDelay(200, withSequence(
+        withTiming(0, { duration: 500 }),
+        withTiming(0.7, { duration: 500 })
+      )),
+      -1,
+      true
+    );
   }, []);
 
   const flameAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scaleY: flameScale.value }],
     opacity: flameOpacity.value,
+  }));
+
+  const particle1Style = useAnimatedStyle(() => ({
+    opacity: particle1Opacity.value,
+  }));
+
+  const particle2Style = useAnimatedStyle(() => ({
+    opacity: particle2Opacity.value,
+  }));
+
+  const particle3Style = useAnimatedStyle(() => ({
+    opacity: particle3Opacity.value,
   }));
 
   return (
@@ -50,19 +94,9 @@ export default function JetpackFlame() {
       </Animated.View>
       
       {/* Particle effects */}
-      {[...Array(3)].map((_, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.particle,
-            {
-              left: 5 + index * 8,
-              // @ts-ignore - animationDelay is web only
-              animationDelay: `${index * 100}ms`,
-            },
-          ]}
-        />
-      ))}
+      <Animated.View style={[styles.particle, { left: 5 }, particle1Style]} />
+      <Animated.View style={[styles.particle, { left: 13 }, particle2Style]} />
+      <Animated.View style={[styles.particle, { left: 21 }, particle3Style]} />
     </View>
   );
 }

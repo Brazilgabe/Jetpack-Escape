@@ -3,6 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  useAnimatedReaction,
+  runOnJS,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
@@ -15,6 +17,7 @@ interface ObstacleProps {
 
 export default function Obstacle({ obstacle }: ObstacleProps) {
   const rotation = useSharedValue(0);
+  const [isActive, setIsActive] = React.useState(true);
 
   React.useEffect(() => {
     if (obstacle.type === 'blade') {
@@ -25,6 +28,14 @@ export default function Obstacle({ obstacle }: ObstacleProps) {
       );
     }
   }, [obstacle.type]);
+
+  // Use useAnimatedReaction to sync active state
+  useAnimatedReaction(
+    () => obstacle.active.value,
+    (value) => {
+      runOnJS(setIsActive)(value);
+    }
+  );
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -76,7 +87,7 @@ export default function Obstacle({ obstacle }: ObstacleProps) {
     }
   };
 
-  if (!obstacle.active.value) {
+  if (!isActive) {
     return null;
   }
 

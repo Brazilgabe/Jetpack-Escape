@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Rocket, Trophy } from 'lucide-react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import ParallaxBackground from '@/components/game/screens/ParallaxBackground';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -12,7 +13,7 @@ interface StartScreenProps {
 }
 
 export default function StartScreen({ onStart, highScore }: StartScreenProps) {
-  const staticScrollOffset = { value: 0 } as any;
+  const staticScrollOffset = useSharedValue(0);
 
   return (
     <View style={styles.container}>

@@ -25,6 +25,7 @@ import {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GROUND_LEVEL = SCREEN_HEIGHT - GameConfig.PLAYER_SIZE - GameConfig.GROUND_OFFSET;
 const TARGET_HEIGHT = SCREEN_HEIGHT * GameConfig.TARGET_HEIGHT_RATIO;
+const STAGING_HEIGHT = SCREEN_HEIGHT * GameConfig.STAGING_HEIGHT_RATIO;
 
 // Helper function to create SharedValue objects outside of hooks
 const createSharedValue = (value: number) => {
@@ -54,6 +55,9 @@ export default function GameContainer() {
   const scrollOffset = useSharedValue(0);
   const hasStarted = useSharedValue(false);
   const hasLiftedOff = useSharedValue(false);
+  const gameStartTime = useSharedValue(0);
+  const timeSinceStart = useSharedValue(0);
+  const hasReachedStaging = useSharedValue(false);
 
   const score = useSharedValue(0);
   const coins = useSharedValue(0);
@@ -129,6 +133,8 @@ export default function GameContainer() {
     scrollOffset.value = 0;
     hasStarted.value = false;
     hasLiftedOff.value = false;
+    hasReachedStaging.value = false;
+    timeSinceStart.value = 0;
     lastTimeRef.current = performance.now();
     obstaclesRef.current = [];
     coinsRef.current = [];
@@ -176,10 +182,20 @@ export default function GameContainer() {
       playerVelocity.value = Math.max(-GameConfig.MAX_VELOCITY, Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value));
       playerY.value += playerVelocity.value * dt;
       if (playerY.value < GROUND_LEVEL) hasLiftedOff.value = true;
-      if (playerY.value < TARGET_HEIGHT) {
+      
+      // First, move player to staging height (halfway up screen)
+      if (!hasReachedStaging.value && playerY.value > STAGING_HEIGHT) {
+        playerY.value = STAGING_HEIGHT;
+        playerVelocity.value = 0;
+        hasReachedStaging.value = true;
+      }
+      
+      // Then allow normal flight above staging height
+      if (hasReachedStaging.value && playerY.value < TARGET_HEIGHT) {
         playerY.value = TARGET_HEIGHT;
         playerVelocity.value = Math.max(playerVelocity.value, 0);
       }
+      
       if (hasLiftedOff.value && playerY.value >= GROUND_LEVEL && playerVelocity.value >= 0) {
         playerY.value = GROUND_LEVEL;
         playerVelocity.value = 0;
@@ -191,7 +207,12 @@ export default function GameContainer() {
     playerX.value += controlDirection.value * GameConfig.HORIZONTAL_SPEED * dt;
     playerX.value = Math.max(0, Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value));
     if (!hasStarted.value) return;
-    scrollOffset.value += GameConfig.SCROLL_SPEED * dt;
+    
+    // Delay parallax start by 2 seconds
+    timeSinceStart.value += dt * 1000; // Convert to milliseconds
+    if (timeSinceStart.value > 2000) {
+      scrollOffset.value += GameConfig.SCROLL_SPEED * dt;
+    }
 
     // Update obstacles with optimized logic
     let obs = obstaclesRef.current.map(o => ({ 

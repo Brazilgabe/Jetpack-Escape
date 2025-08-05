@@ -185,8 +185,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   whiteHouse: {
+    position: 'absolute',
+    bottom: 0,
+    zIndex: 1,
     width: '100%',
     height: '100%',
+    objectFit: 'contain',
   },
   cloudsLayer: {
     position: 'absolute',

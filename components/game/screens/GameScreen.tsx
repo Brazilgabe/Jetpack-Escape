@@ -22,7 +22,7 @@ export default function GameScreen({
 }: GameProps) {
   return (
     <View style={styles.container}>
-      <ParallaxBackground scrollOffset={scrollOffset} />
+      <ParallaxBackground scrollOffset={scrollOffset} distance={distance} />
 
       <View style={styles.gameArea}>
         {/* {obstacles?.map((obstacle) => (

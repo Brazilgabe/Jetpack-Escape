@@ -10,6 +10,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ParallaxBackgroundProps {
   scrollOffset: Animated.SharedValue<number>;
+  distance?: Animated.SharedValue<number>;
 }
 
 // Color transition steps
@@ -66,8 +67,7 @@ const SKY_COLORS = [
   '#000000'
 ];
 
-
-export default function ParallaxBackground({ scrollOffset }: ParallaxBackgroundProps) {
+export default function ParallaxBackground({ scrollOffset, distance }: ParallaxBackgroundProps) {
   const skyAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: scrollOffset.value * 0.1 }],
   }));
@@ -80,10 +80,15 @@ export default function ParallaxBackground({ scrollOffset }: ParallaxBackgroundP
     transform: [{ translateY: scrollOffset.value * 0.6 }],
   }));
 
-
+  const whiteHouseAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scrollOffset.value * 0.2 }],
+  }));
 
   const gradientAnimatedStyle = useAnimatedStyle(() => {
-    const progress = Math.min(scrollOffset.value / 100000, 1);
+    // Use distance if available, otherwise fall back to scrollOffset calculation
+    const currentDistance = distance ? distance.value : Math.floor(scrollOffset.value / 10);
+    // Make the transition more gradual by using a smaller range
+    const progress = Math.min(currentDistance / 50000, 1);
     const colorIndex = Math.floor(progress * (SKY_COLORS.length - 1));
     const nextColorIndex = Math.min(colorIndex + 1, SKY_COLORS.length - 1);
     const localProgress = (progress * (SKY_COLORS.length - 1)) % 1;
@@ -107,12 +112,12 @@ export default function ParallaxBackground({ scrollOffset }: ParallaxBackgroundP
         <Animated.View style={[styles.gradient, gradientAnimatedStyle]} />
       </Animated.View>
       
-      {/* Initial Scene - White House */}
-      <Animated.View style={[styles.initialScene, skyAnimatedStyle]}>
+      {/* White House PNG Layer */}
+      <Animated.View style={[styles.whiteHouseLayer, whiteHouseAnimatedStyle]}>
         <Image 
           source={require('@/assets/scenary/white-house.png')}
           style={styles.whiteHouse}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       </Animated.View>
       
@@ -174,23 +179,18 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  initialScene: {
+  whiteHouseLayer: {
     position: 'absolute',
-    top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    height: SCREEN_HEIGHT,
+    height: SCREEN_HEIGHT * 0.8,
     width: SCREEN_WIDTH,
     zIndex: 1,
   },
   whiteHouse: {
-    position: 'absolute',
-    bottom: 0,
-    zIndex: 1,
     width: '100%',
     height: '100%',
-    objectFit: 'contain',
   },
   cloudsLayer: {
     position: 'absolute',

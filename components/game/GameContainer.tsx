@@ -87,14 +87,14 @@ export default function GameContainer() {
   useAnimatedReaction(
     () => Math.floor(scrollOffset.value / 10),
     (val) => {
-      distance.value = withTiming(val, { duration: 100 });
+      distance.value = val;
     }
   );
 
   useAnimatedReaction(
     () => Math.floor(scrollOffset.value / 10),
     (val) => {
-      score.value = withTiming(val * 10, { duration: 100 });
+      score.value = val * 10;
     }
   );
 
@@ -208,11 +208,8 @@ export default function GameContainer() {
     playerX.value = Math.max(0, Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value));
     if (!hasStarted.value) return;
     
-    // Delay parallax start by 2 seconds
-    timeSinceStart.value += dt * 1000; // Convert to milliseconds
-    if (timeSinceStart.value > 2000) {
-      scrollOffset.value += GameConfig.SCROLL_SPEED * dt;
-    }
+    // Start parallax immediately when jetpack activates
+    scrollOffset.value += GameConfig.SCROLL_SPEED * dt;
 
     // Update obstacles with optimized logic
     let obs = obstaclesRef.current.map(o => ({ 

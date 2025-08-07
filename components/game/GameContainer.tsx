@@ -77,9 +77,9 @@ export default function GameContainer() {
   // Smooth player movement with spring animation
   const displayY = useDerivedValue(() => 
     withSpring(playerY.value, { 
-      damping: 15, 
-      stiffness: 100,
-      mass: 0.8 
+      damping: 50, 
+      stiffness: 50,
+      mass: 1.5 
     })
   );
 
@@ -170,13 +170,12 @@ export default function GameContainer() {
 
   const updateGame = useCallback((dt: number) => {
     const gravity = GameConfig.GRAVITY;
-    const jetpackForce = GameConfig.JETPACK_FORCE;
 
     if (!hasStarted.value && playerY.value >= GROUND_LEVEL) {
       playerY.value = GROUND_LEVEL;
       playerVelocity.value = 0;
     } else {
-      if (isJetpackActive.value) playerVelocity.value -= jetpackForce * dt;
+      if (isJetpackActive.value) playerVelocity.value -= gravity * dt;
       else playerVelocity.value += gravity * dt;
 
       playerVelocity.value = Math.max(-GameConfig.MAX_VELOCITY, Math.min(GameConfig.MAX_VELOCITY, playerVelocity.value));
@@ -196,7 +195,7 @@ export default function GameContainer() {
         playerVelocity.value = Math.max(playerVelocity.value, 0);
       }
       
-      if (hasLiftedOff.value && playerY.value >= GROUND_LEVEL && playerVelocity.value >= 0) {
+      if (hasLiftedOff.value && playerY.value >= SCREEN_HEIGHT + 100 && playerVelocity.value >= 0) {
         playerY.value = GROUND_LEVEL;
         playerVelocity.value = 0;
         runOnJS(gameOver)();
@@ -208,8 +207,22 @@ export default function GameContainer() {
     playerX.value = Math.max(0, Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, playerX.value));
     if (!hasStarted.value) return;
     
-    // Start parallax immediately when jetpack activates
-    scrollOffset.value += GameConfig.SCROLL_SPEED * dt;
+    // Update parallax speed based on player velocity
+    if (isJetpackActive.value) {
+      if (hasReachedStaging.value && playerY.value >= STAGING_HEIGHT) {
+        playerY.value = STAGING_HEIGHT;
+      }
+      // Use player velocity to affect parallax speed
+      const velocityFactor = Math.abs(playerVelocity.value) / GameConfig.MAX_VELOCITY;
+      const dynamicScrollSpeed = GameConfig.SCROLL_SPEED * (0.5 + velocityFactor * 0.5);
+      scrollOffset.value += dynamicScrollSpeed * dt;
+    } else {
+      playerY.value += gravity * dt;
+      // if (playerY.value < GROUND_LEVEL) {
+      //   runOnJS(gameOver)();
+      //   return;
+      // }
+    }
 
     // Update obstacles with optimized logic
     let obs = obstaclesRef.current.map(o => ({ 

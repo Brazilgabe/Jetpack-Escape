@@ -5,10 +5,6 @@ export class GamePhysics {
     return velocity - (GameConfig.GRAVITY * deltaTime * 0.001);
   }
 
-  static applyJetpack(velocity: number, deltaTime: number): number {
-    return velocity + (GameConfig.JETPACK_FORCE * deltaTime * 0.001);
-  }
-
   static limitVelocity(velocity: number): number {
     return Math.max(-GameConfig.MAX_VELOCITY, Math.min(GameConfig.MAX_VELOCITY, velocity));
   }

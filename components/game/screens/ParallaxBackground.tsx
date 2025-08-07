@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, StyleSheet, Dimensions, Image } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -13,105 +13,64 @@ interface ParallaxBackgroundProps {
   distance?: Animated.SharedValue<number>;
 }
 
-// Color transition steps
-const SKY_COLORS = [
-  '#38a5e3',
-  '#39a2e2',
-  '#3a9ee0',
-  '#3b9bdf',
-  '#3b97dd',
-  '#3c93db',
-  '#3d8fda',
-  '#3e8cd9',
-  '#3f88d7',
-  '#4084d5',
-  '#4181d4',
-  '#427dd2',
-  '#437ad1',
-  '#4476d0',
-  '#4572ce',
-  '#456fcc',
-  '#466bcb',
-  '#4768c9',
-  '#4863c8',
-  '#4960c6',
-  '#4a5cc5',
-  '#4b59c3',
-  '#4c55c2',
-  '#4d51c0',
-  '#4e4ebf',
-  '#4c4bba',
-  '#4948b3',
-  '#4644aa',
-  '#4341a2',
-  '#403e9b',
-  '#3d3b94',
-  '#3a388c',
-  '#363483',
-  '#33317c',
-  '#302e74',
-  '#2d2c6d',
-  '#292864',
-  '#26255c',
-  '#232255',
-  '#201f4d',
-  '#1d1c46',
-  '#19183d',
-  '#161536',
-  '#13122e',
-  '#100f27',
-  '#0c0c1e',
-  '#090916',
-  '#06060f',
-  '#030307',
-  '#000000'
+const SKY_COLORS = ['#38a5e3', '#3b97dd', '#403e9b', '#13122e', '#000000'];
+
+const CLOUD_TYPES = [
+  require('@/assets/sky-decoration/cloud-1.png'),
+  require('@/assets/sky-decoration/cloud-2.png'),
+  require('@/assets/sky-decoration/cloud-3.png'),
+  require('@/assets/sky-decoration/cloud-4.png'),
 ];
 
 export default function ParallaxBackground({ scrollOffset, distance }: ParallaxBackgroundProps) {
-  const skyAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scrollOffset.value * 0.1 }],
-  }));
+  const parallaxSpeed = 0.3;
 
-  const cloudsAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scrollOffset.value * 0.3 }],
-  }));
+  const cloudLeftPositions = useRef<number[]>(
+    Array.from({ length: CLOUD_TYPES.length }, () => Math.floor(Math.random() * (SCREEN_WIDTH + 60)) - 60)
+  );
+
+  const cloudTopOffsets = useRef<number[]>(
+    Array.from({ length: CLOUD_TYPES.length }, () => Math.floor(Math.random() * SCREEN_HEIGHT))
+  );
+
+  const gradientAnimatedStyle = useAnimatedStyle(() => {
+    const currentDistance = distance ? distance.value : scrollOffset.value / 10;
+    const progress = Math.min(currentDistance / 100000, 1);
+
+    return {
+      backgroundColor: interpolateColor(
+        progress,
+        [0, 0.25, 0.5, 0.75, 1],
+        SKY_COLORS
+      ),
+    };
+  });
 
   const cityAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: scrollOffset.value * 0.6 }],
   }));
 
   const whiteHouseAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scrollOffset.value * 0.2 }],
+    transform: [{ translateY: scrollOffset.value * parallaxSpeed }],
   }));
 
-  const gradientAnimatedStyle = useAnimatedStyle(() => {
-    // Use distance if available, otherwise fall back to scrollOffset calculation
-    const currentDistance = distance ? distance.value : Math.floor(scrollOffset.value / 10);
-    // Make the transition more gradual by using a smaller range
-    const progress = Math.min(currentDistance / 50000, 1);
-    const colorIndex = Math.floor(progress * (SKY_COLORS.length - 1));
-    const nextColorIndex = Math.min(colorIndex + 1, SKY_COLORS.length - 1);
-    const localProgress = (progress * (SKY_COLORS.length - 1)) % 1;
-    
-    const startColor = SKY_COLORS[colorIndex];
-    const endColor = SKY_COLORS[nextColorIndex];
-    
-    return {
-      backgroundColor: interpolateColor(
-        localProgress,
-        [0, 1],
-        [startColor, endColor]
-      ),
-    };
+  const cloudOpacityStyle = useAnimatedStyle(() => {
+    const currentDistance = distance ? distance.value : scrollOffset.value / 10;
+    let opacity = 1;
+    if (currentDistance > 10000) {
+      const fadeProgress = Math.min((currentDistance - 10000) / 16000, 1);
+      opacity = 1 - fadeProgress;
+    }
+    return { opacity };
   });
 
   return (
     <View style={styles.container}>
       {/* Sky Gradient */}
-      <Animated.View style={[styles.skyLayer, skyAnimatedStyle]}>
+      <Animated.View style={styles.skyLayer}>
         <Animated.View style={[styles.gradient, gradientAnimatedStyle]} />
       </Animated.View>
-      
+
       {/* White House PNG Layer */}
       <Animated.View style={[styles.whiteHouseLayer, whiteHouseAnimatedStyle]}>
         <Image 
@@ -120,26 +79,50 @@ export default function ParallaxBackground({ scrollOffset, distance }: ParallaxB
           resizeMode="cover"
         />
       </Animated.View>
-      
+
       {/* Clouds Layer */}
-      <Animated.View style={[styles.cloudsLayer, cloudsAnimatedStyle]}>
-        {[...Array(15)].map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.cloud,
-              {
-                left: (index * SCREEN_WIDTH * 0.15) % SCREEN_WIDTH,
-                top: (index * 100) % SCREEN_HEIGHT,
-                opacity: 0.8 - (index * 0.02),
-                width: 60 + (index % 3) * 20,
-                height: 30 + (index % 2) * 10,
-              },
-            ]}
-          />
-        ))}
+      <Animated.View style={styles.cloudsLayer}>
+        {CLOUD_TYPES.map((cloudSource, index) => {
+          const cloudAnimatedStyle = useAnimatedStyle(() => {
+            const cloudSpeed = scrollOffset.value * parallaxSpeed;
+            const loopRange = SCREEN_HEIGHT + 200;
+            const cloudStart = cloudTopOffsets.current[index];
+            const cloudCurrentPosition = ((cloudStart + cloudSpeed) % loopRange) - 100;
+
+            const isAtTop = cloudCurrentPosition <= -90;
+
+            if (isAtTop) {
+              cloudLeftPositions.current[index] = Math.floor(Math.random() * (SCREEN_WIDTH + 60)) - 60;
+            }
+
+            return {
+              top: cloudCurrentPosition,
+              left: cloudLeftPositions.current[index],
+              width: 120,
+              height: 80,
+              transform: [{ scale: 0.8 + (index * 0.1) }],
+            };
+          });
+
+          return (
+            <Animated.View
+              key={`cloud-${index}`}
+              style={[
+                styles.cloud,
+                cloudOpacityStyle,
+                cloudAnimatedStyle,
+              ]}
+            >
+              <Image
+                source={cloudSource}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="contain"
+              />
+            </Animated.View>
+          );
+        })}
       </Animated.View>
-      
+
       {/* City Silhouette */}
       <Animated.View style={[styles.cityLayer, cityAnimatedStyle]}>
         {[...Array(10)].map((_, index) => (
@@ -171,13 +154,14 @@ const styles = StyleSheet.create({
   },
   skyLayer: {
     position: 'absolute',
-    top: -SCREEN_HEIGHT,
+    top: 0,
     left: 0,
     right: 0,
-    height: SCREEN_HEIGHT * 3,
+    height: SCREEN_HEIGHT,
   },
   gradient: {
     flex: 1,
+    backgroundColor: '#38a5e3',
   },
   whiteHouseLayer: {
     position: 'absolute',
@@ -194,15 +178,13 @@ const styles = StyleSheet.create({
   },
   cloudsLayer: {
     position: 'absolute',
-    top: -SCREEN_HEIGHT,
+    top: 0,
     left: 0,
     right: 0,
-    height: SCREEN_HEIGHT * 3,
+    height: SCREEN_HEIGHT,
   },
   cloud: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
   },
   cityLayer: {
     position: 'absolute',

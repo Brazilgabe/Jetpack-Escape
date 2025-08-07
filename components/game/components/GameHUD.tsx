@@ -12,10 +12,10 @@ interface GameHUDProps {
 export default function GameHUD({ scoreValue, coinsValue, distanceValue }: GameHUDProps) {
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(0, 0, 0, 0.8)', 'transparent']}
+      {/* <LinearGradient
+        colors={['rgba(0, 0, 0, 0.3)', 'transparent']}
         style={styles.topGradient}
-      />
+      /> */}
 
       <View style={styles.hudContainer}>
         <View style={styles.statItem}>
@@ -51,13 +51,13 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 5,
   },
-  topGradient: {
-    height: 120,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
+  // topGradient: {
+  //   height: 120,
+  //   position: 'absolute',
+  //   top: 0,
+  //   left: 0,
+  //   right: 0,
+  // },
   hudContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',

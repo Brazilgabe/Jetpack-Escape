@@ -20,7 +20,7 @@ export default function StartScreen({ onStart, highScore }: StartScreenProps) {
       <ParallaxBackground scrollOffset={staticScrollOffset} />
       
       <LinearGradient
-        colors={['transparent', 'rgba(26, 26, 46, 0.8)', '#1a1a2e']}
+        colors={['rgba(26, 26, 46, .9)', '#1a1a2e']}
         style={styles.overlay}
       />
       

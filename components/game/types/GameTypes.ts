@@ -30,9 +30,9 @@ export interface PowerUp {
 }
 
 export const GameConfig = {
-  GRAVITY: 800,
-  JETPACK_FORCE: 2000,
-  SCROLL_SPEED: 2000,
+  GRAVITY: 100,
+  JETPACK_FORCE: 500,
+  SCROLL_SPEED: 500,
   HORIZONTAL_SPEED: 300,
   // Player positioning
   GROUND_OFFSET: 90,

@@ -30,14 +30,14 @@ export interface PowerUp {
 }
 
 export const GameConfig = {
-  GRAVITY: 100,
+  GRAVITY: 500,
   JETPACK_FORCE: 500,
   SCROLL_SPEED: 500,
   HORIZONTAL_SPEED: 300,
   // Player positioning
   GROUND_OFFSET: 90,
   TARGET_HEIGHT_RATIO: 1 / 3,
-  STAGING_HEIGHT_RATIO: 1 / 2, // Halfway up the screen
+  STAGING_HEIGHT_RATIO: 1 / 1.8, // Halfway up the screen
   PLAYER_SIZE: 60,
   COIN_SIZE: 30,
   // Dimensions of the player's hitbox used for accurate collision detection

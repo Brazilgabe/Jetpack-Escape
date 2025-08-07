@@ -27,10 +27,10 @@ export default function GameScreen({
       <View style={styles.gameArea}>
         {/* {obstacles?.map((obstacle) => (
           <Obstacle key={obstacle.id} obstacle={obstacle} />
-        ))}
+        ))} */}
         {coinsList?.map((coin) => (
           <Coin key={coin.id} coin={coin} />
-        ))} */}
+        ))}
         <Player
           animatedStyle={playerAnimatedStyle}
           isJetpackActive={isJetpackActive}

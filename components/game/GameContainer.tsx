@@ -299,10 +299,8 @@ export default function GameContainer() {
       isJetpackActive.value = false;
       playerVelocity.value = Math.max(playerVelocity.value, 0);
     })
-    .onFinalize(() => {
-      isJetpackActive.value = false;
-      playerVelocity.value = Math.max(playerVelocity.value, 0);
-    });
+    .maxDistance(10) // Only trigger for short taps
+    .maxDuration(500); // Only trigger for quick taps
 
   const combinedGesture = Gesture.Race(panGesture, tapGesture);
 

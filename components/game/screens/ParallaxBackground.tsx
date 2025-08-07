@@ -123,7 +123,7 @@ export default function ParallaxBackground({ scrollOffset, distance }: ParallaxB
         })}
       </Animated.View>
 
-      {/* City Silhouette */}
+      {/* City Silhouette
       <Animated.View style={[styles.cityLayer, cityAnimatedStyle]}>
         {[...Array(10)].map((_, index) => (
           <View
@@ -138,7 +138,7 @@ export default function ParallaxBackground({ scrollOffset, distance }: ParallaxB
             ]}
           />
         ))}
-      </Animated.View>
+      </Animated.View> */}
     </View>
   );
 }

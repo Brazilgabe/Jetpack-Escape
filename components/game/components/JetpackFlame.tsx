@@ -94,9 +94,9 @@ export default function JetpackFlame() {
       </Animated.View>
       
       {/* Particle effects */}
-      <Animated.View style={[styles.particle, { left: 5 }, particle1Style]} />
-      <Animated.View style={[styles.particle, { left: 13 }, particle2Style]} />
-      <Animated.View style={[styles.particle, { left: 21 }, particle3Style]} />
+      <Animated.View style={[styles.particle, { left: -6 }, particle1Style]} />
+      <Animated.View style={[styles.particle, { left: 4 }, particle2Style]} />
+      <Animated.View style={[styles.particle, { left: 14 }, particle3Style]} />
     </View>
   );
 }
@@ -108,15 +108,15 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   flame: {
-    width: 30,
+    width: 10,
     height: 35,
-    borderRadius: 15,
+    borderRadius: 10,
     borderTopLeftRadius: 5,
     borderTopRightRadius: 5,
   },
   flameGradient: {
     flex: 1,
-    borderRadius: 15,
+    borderRadius: 10,
     borderTopLeftRadius: 5,
     borderTopRightRadius: 5,
   },

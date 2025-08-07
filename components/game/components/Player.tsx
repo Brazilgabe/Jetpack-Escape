@@ -53,19 +53,19 @@ const styles = StyleSheet.create({
     height: 80,
   },
   character: {
-    width: '100%',
-    height: '100%',
+    width: '160%',
+    height: '160%',
   },
   leftFlameContainer: {
     position: 'absolute',
-    bottom: -25,
-    left: 15,
+    bottom: -35,
+    left: 14.5,
     zIndex: -1,
   },
   rightFlameContainer: {
     position: 'absolute',
-    bottom: -25,
-    right: 15,
+    bottom: -35,
+    right: -48.5,
     zIndex: -1,
   },
 });

@@ -28,9 +28,9 @@ export default function GameScreen({
         {/* {obstacles?.map((obstacle) => (
           <Obstacle key={obstacle.id} obstacle={obstacle} />
         ))} */}
-        {coinsList?.map((coin) => (
+        {/* {coinsList?.map((coin) => (
           <Coin key={coin.id} coin={coin} />
-        ))}
+        ))} */}
         <Player
           animatedStyle={playerAnimatedStyle}
           isJetpackActive={isJetpackActive}

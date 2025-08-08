@@ -218,10 +218,6 @@ export default function GameContainer() {
       scrollOffset.value += dynamicScrollSpeed * dt;
     } else {
       playerY.value += gravity * dt;
-      // if (playerY.value < GROUND_LEVEL) {
-      //   runOnJS(gameOver)();
-      //   return;
-      // }
     }
 
     // Update obstacles with optimized logic

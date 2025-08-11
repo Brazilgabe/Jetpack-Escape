@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Trophy, Coins, MapPin, Zap } from 'lucide-react-native';
@@ -41,13 +41,10 @@ export default function GameHUD({ scoreValue, coinsValue, distanceValue, fuelPer
     }
   }, [playerStats?.doubleCoins, playerStats?.jetpackSpeed]);
 
+
+
   return (
     <View style={styles.container}>
-      {/* <LinearGradient
-        colors={['rgba(0, 0, 0, 0.3)', 'transparent']}
-        style={styles.topGradient}
-      /> */}
-
       <View style={styles.hudContainer}>
         <View style={styles.statItem}>
           <Trophy size={20} color="#ff6b6b" />
@@ -74,30 +71,26 @@ export default function GameHUD({ scoreValue, coinsValue, distanceValue, fuelPer
             {`${Math.floor(distanceValue)}m`}
           </Text>
         </View>
-      </View>
-      
-      {/* Fuel Gauge */}
-      {fuelPercentage !== undefined && (
-        <View style={styles.fuelGauge}>
-          <View style={styles.fuelIconContainer}>
-            <Zap size={16} color={fuelPercentage > 20 ? '#4ecdc4' : '#ff6b6b'} />
-          </View>
-          <View style={styles.fuelBarContainer}>
+
+        {/* Fuel Gauge - Now part of the main HUD row */}
+        {fuelPercentage !== undefined && (
+          <View style={styles.fuelGauge}>
+            <Text style={styles.fuelCanIcon}>⛽</Text>
             <View style={styles.fuelBar}>
               <View 
                 style={[
                   styles.fuelFill, 
                   { 
                     width: `${fuelPercentage}%`,
-                    backgroundColor: fuelPercentage > 20 ? '#4ecdc4' : fuelPercentage > 10 ? '#ffa500' : '#ff6b6b'
+                    backgroundColor: fuelPercentage > 60 ? '#4ecdc4' : fuelPercentage > 30 ? '#ffa500' : '#ff6b6b'
                   }
                 ]} 
               />
             </View>
             <Text style={styles.fuelText}>{`${Math.floor(fuelPercentage)}%`}</Text>
           </View>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Upgrade Notification */}
       {showUpgradeNotification && (
@@ -118,13 +111,6 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 5,
   },
-  // topGradient: {
-  //   height: 120,
-  //   position: 'absolute',
-  //   top: 0,
-  //   left: 0,
-  //   right: 0,
-  // },
   hudContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -149,32 +135,31 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginLeft: 6,
   },
+  
+  // Simple Fuel Gauge - Matching HUD Style
   fuelGauge: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    width: 135,
   },
-  fuelIconContainer: {
-    marginRight: 8,
-  },
-  fuelBarContainer: {
-    flex: 1,
-    alignItems: 'center',
+  fuelCanIcon: {
+    fontSize: 16,
+    color: '#ffffff',
+    marginRight: 6,
   },
   fuelBar: {
-    width: 120,
+    width: 40,
     height: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 4,
     overflow: 'hidden',
+    marginRight: 6,
   },
   fuelFill: {
     height: '100%',
@@ -184,8 +169,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#ffffff',
-    marginTop: 4,
   },
+  
   upgradedItem: {
     borderColor: '#ffd700',
     borderWidth: 2,

@@ -68,6 +68,7 @@ export default function GameContainer() {
   const score = useSharedValue(0);
   const coins = useSharedValue(0);
   const distance = useSharedValue(0);
+  const hasFuel = useSharedValue(true);
 
   const obstaclesRef = useRef<ObstacleType[]>([]);
   const coinsRef = useRef<CoinType[]>([]);
@@ -165,6 +166,7 @@ export default function GameContainer() {
     setPlayerStats(prev => {
       const next = { ...prev, currentFuel: prev.fuelCapacity };
       currentFuelRef.current = next.currentFuel;
+      hasFuel.value = true;
       return next;
     });
     
@@ -283,6 +285,14 @@ export default function GameContainer() {
         const nextFuel = Math.max(0, currentFuelRef.current - fuelConsumption);
         currentFuelRef.current = nextFuel;
         runOnJS(setPlayerStats)(prev => ({ ...prev, currentFuel: nextFuel }));
+        
+        // Update fuel availability for worklets
+        hasFuel.value = nextFuel > 0;
+        
+        // Auto-deactivate jetpack when fuel depletes
+        if (nextFuel <= 0) {
+          isJetpackActive.value = false;
+        }
       } else {
         playerVelocity.value += gravity * dt;
       }
@@ -436,11 +446,13 @@ export default function GameContainer() {
     runOnJS(setObstacles)(obs);
 
     // Update coins with optimized logic and collision detection
-    // Use the same dynamic speed calculation as scrollOffset for consistent parallax
-    const coinScrollSpeed = GameConfig.SCROLL_SPEED * (0.5 + velocityFactor * 0.5) * 0.3;
-    coinsRef.current.forEach(c => {
-      c.y.value = c.y.value + coinScrollSpeed * dt;
-    });
+    // Use the same movement logic as clouds - only move when jetpack is active
+    if (isJetpackActive.value && hasStarted.value) {
+      const coinScrollSpeed = GameConfig.SCROLL_SPEED * (0.5 + velocityFactor * 0.5) * 0.3;
+      coinsRef.current.forEach(c => {
+        c.y.value = c.y.value + coinScrollSpeed * dt;
+      });
+    }
     const coinsList = coinsRef.current.filter(c => {
       const yValue = c.y.value;
       const collectedValue = c.collected.value;
@@ -532,7 +544,10 @@ export default function GameContainer() {
   const panGesture = Gesture.Pan()
     .onStart((event) => {
       panStartX.value = playerX.value;
-      isJetpackActive.value = true;
+      // Only activate jetpack if there's fuel available
+      if (hasFuel.value) {
+        isJetpackActive.value = true;
+      }
       controlDirection.value = 0;
       hasStarted.value = true;
       // Only set hasLiftedOff if player is actually lifting off
@@ -544,8 +559,12 @@ export default function GameContainer() {
       // Handle horizontal movement
       playerX.value = Math.max(0, Math.min(SCREEN_WIDTH - GameConfig.PLAYER_SIZE, panStartX.value + event.translationX));
       
-      // Keep jetpack active while touching
-      isJetpackActive.value = true;
+      // Keep jetpack active while touching, but only if there's fuel
+      if (hasFuel.value) {
+        isJetpackActive.value = true;
+      } else {
+        isJetpackActive.value = false;
+      }
     })
     .onEnd(() => {
       isJetpackActive.value = false;
@@ -560,7 +579,10 @@ export default function GameContainer() {
 
   const tapGesture = Gesture.Tap()
     .onTouchesDown(() => {
-      isJetpackActive.value = true;
+      // Only activate jetpack if there's fuel available
+      if (hasFuel.value) {
+        isJetpackActive.value = true;
+      }
       hasStarted.value = true;
       // Only set hasLiftedOff if player is actually lifting off
       if (playerY.value < GROUND_LEVEL) {

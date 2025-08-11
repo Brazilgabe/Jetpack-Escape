@@ -152,23 +152,6 @@ export default function ParallaxBackground({ scrollOffset, distance }: ParallaxB
           );
         })}
       </Animated.View>
-
-      {/* City Silhouette
-      <Animated.View style={[styles.cityLayer, cityAnimatedStyle]}>
-        {[...Array(10)].map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.building,
-              {
-                left: index * (SCREEN_WIDTH / 8),
-                height: 100 + (index % 3) * 80,
-                width: SCREEN_WIDTH / 8,
-              },
-            ]}
-          />
-        ))}
-      </Animated.View> */}
     </View>
   );
 }

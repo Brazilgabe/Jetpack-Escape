@@ -11,9 +11,11 @@ interface StartScreenProps {
   onStart: () => void;
   onOpenStore: () => void;
   highScore: number;
+  totalCoins: number;
+  isDataLoaded: boolean;
 }
 
-export default function StartScreen({ onStart, onOpenStore, highScore }: StartScreenProps) {
+export default function StartScreen({ onStart, onOpenStore, highScore, totalCoins, isDataLoaded }: StartScreenProps) {
   const staticScrollOffset = useSharedValue(0);
 
   return (
@@ -39,12 +41,24 @@ export default function StartScreen({ onStart, onOpenStore, highScore }: StartSc
           </View>
         )}
         
-        <TouchableOpacity style={styles.playButton} onPress={onStart}>
+        {totalCoins > 0 && (
+          <View style={styles.totalCoinsContainer}>
+            <Text style={styles.totalCoinsText}>Total Coins: {totalCoins.toLocaleString()}</Text>
+          </View>
+        )}
+        
+        <TouchableOpacity 
+          style={[styles.playButton, !isDataLoaded && styles.playButtonDisabled]} 
+          onPress={onStart}
+          disabled={!isDataLoaded}
+        >
           <LinearGradient
-            colors={['#ff6b6b', '#ee5a24']}
+            colors={isDataLoaded ? ['#ff6b6b', '#ee5a24'] : ['#666', '#444']}
             style={styles.playButtonGradient}
           >
-            <Text style={styles.playButtonText}>TAP TO PLAY</Text>
+            <Text style={[styles.playButtonText, !isDataLoaded && styles.playButtonTextDisabled]}>
+              {isDataLoaded ? 'TAP TO PLAY' : 'LOADING...'}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
         
@@ -123,6 +137,22 @@ const styles = StyleSheet.create({
     color: '#ffd93d',
     marginLeft: 8,
   },
+  totalCoinsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#4ecdc4',
+  },
+  totalCoinsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4ecdc4',
+  },
   playButton: {
     marginBottom: 40,
     borderRadius: 30,
@@ -143,6 +173,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: 2,
+  },
+  playButtonDisabled: {
+    opacity: 0.6,
+  },
+  playButtonTextDisabled: {
+    color: '#999',
   },
   storeButton: {
     marginBottom: 20,

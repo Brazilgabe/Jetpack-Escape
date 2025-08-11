@@ -23,6 +23,16 @@ export interface Coin {
   type: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 }
 
+export interface FuelRefill {
+  id: string;
+  x: SharedValue<number>;
+  y: SharedValue<number>;
+  collected: SharedValue<boolean>;
+  active: SharedValue<boolean>;
+  fuelAmount: number;
+  type: 'small' | 'medium' | 'large';
+}
+
 export interface PowerUp {
   id: string;
   type: 'magnet' | 'shield' | 'slowTime';
@@ -76,13 +86,20 @@ export const GameConfig = {
   OBSTACLE_SPAWN_RATE: 0.05,
   OBSTACLE_SPEED: 200,
   COIN_SPAWN_RATE: 0.12,
+  FUEL_REFILL_SPAWN_RATE: 0.08,
   // Coin configuration
   COIN_TYPES: {
-    bronze: { value: 1, minAltitude: 0, maxAltitude: 10000, color: '#cd7f32' },
-    silver: { value: 10, minAltitude: 5000, maxAltitude: 25000, color: '#c0c0c0' },
-    gold: { value: 50, minAltitude: 15000, maxAltitude: 50000, color: '#ffd700' },
-    platinum: { value: 100, minAltitude: 30000, maxAltitude: 80000, color: '#e5e4e2' },
+    bronze: { value: 10, minAltitude: 0, maxAltitude: 10000, color: '#cd7f32' },
+    silver: { value: 50, minAltitude: 5000, maxAltitude: 25000, color: '#c0c0c0' },
+    gold: { value: 100, minAltitude: 15000, maxAltitude: 50000, color: '#ffd700' },
+    platinum: { value: 500, minAltitude: 30000, maxAltitude: 80000, color: '#e5e4e2' },
     diamond: { value: 1000, minAltitude: 60000, maxAltitude: 999999, color: '#b9f2ff' },
+  },
+  // Fuel refill configuration
+  FUEL_REFILL_TYPES: {
+    small: { fuelAmount: 25, minAltitude: 0, maxAltitude: 999999, color: '#4ecdc4' },
+    medium: { fuelAmount: 50, minAltitude: 5000, maxAltitude: 999999, color: '#ffa500' },
+    large: { fuelAmount: 100, minAltitude: 15000, maxAltitude: 999999, color: '#ff6b6b' },
   },
   // Distance at which difficulty scales
   DIFFICULTY_DISTANCE: 5000,
@@ -171,6 +188,8 @@ export interface GameProps {
   obstacles: Obstacle[];
   // Coins currently on screen
   coinsList: Coin[];
+  // Fuel refills currently on screen
+  fuelRefillsList: FuelRefill[];
   // HUD values (optional for backward compatibility)
   hudScore?: number;
   hudCoins?: number;

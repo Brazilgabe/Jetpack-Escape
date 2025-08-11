@@ -6,6 +6,7 @@ import GameHUD from '@/components/game/components/GameHUD';
 import { GameProps } from '@/components/game/types/GameTypes';
 import Obstacle from '@/components/game/components/Obstacle';
 import Coin from '@/components/game/components/Coin';
+import FuelRefill from '@/components/game/components/FuelRefill';
 
 export default function GameScreen({
   playerAnimatedStyle,
@@ -16,6 +17,7 @@ export default function GameScreen({
   isJetpackActive,
   obstacles,
   coinsList,
+  fuelRefillsList,
   hudScore,
   hudCoins,
   hudDistance,
@@ -32,6 +34,9 @@ export default function GameScreen({
         ))}
         {coinsList?.map((coin) => (
           <Coin key={coin.id} coin={coin} />
+        ))}
+        {fuelRefillsList?.map((fuelRefill) => (
+          <FuelRefill key={fuelRefill.id} fuelRefill={fuelRefill} />
         ))}
         <Player
           animatedStyle={playerAnimatedStyle}

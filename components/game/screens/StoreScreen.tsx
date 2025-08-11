@@ -20,6 +20,8 @@ export default function StoreScreen({
   onPurchaseUpgrade 
 }: StoreScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'speed' | 'fuel' | 'utility' | 'defense'>('all');
+  const [purchaseMessage, setPurchaseMessage] = useState<string>('');
+  const [showPurchaseMessage, setShowPurchaseMessage] = useState(false);
 
   const categories = [
     { id: 'all', name: 'All', icon: '🏪' },
@@ -30,6 +32,14 @@ export default function StoreScreen({
   ];
 
   const upgrades = Object.values(GameConfig.UPGRADES);
+  console.log('Available upgrades:', upgrades.map(u => ({ id: u.id, name: u.name, baseCost: u.baseCost })));
+  
+  // Create a map for easy access by upgrade ID
+  const upgradesMap = upgrades.reduce((acc, upgrade) => {
+    acc[upgrade.id] = upgrade;
+    return acc;
+  }, {} as Record<string, any>);
+  
   const filteredUpgrades = selectedCategory === 'all' 
     ? upgrades 
     : upgrades.filter(upgrade => upgrade.category === selectedCategory);
@@ -40,6 +50,8 @@ export default function StoreScreen({
         return Math.floor((playerStats.jetpackSpeed - 1) / 0.2);
       case 'fuel_efficiency':
         return Math.floor((playerStats.fuelEfficiency - 1) / 0.15);
+      case 'fuel_capacity':
+        return Math.floor((playerStats.fuelCapacity - 100) / 50);
       case 'coin_magnet':
         return Math.floor(playerStats.coinMagnet / 50);
       case 'shield':
@@ -63,6 +75,83 @@ export default function StoreScreen({
 
   const isMaxLevel = (upgrade: any, currentLevel: number): boolean => {
     return currentLevel >= upgrade.maxLevel;
+  };
+
+  const getUpgradeEffect = (upgrade: any, level: number): string => {
+    const effect = upgrade.effect(level);
+    switch (upgrade.id) {
+      case 'jetpack_speed':
+        return `${effect.toFixed(1)}x`;
+      case 'fuel_efficiency':
+        return `${effect.toFixed(1)}x`;
+      case 'fuel_capacity':
+        return `${effect}`;
+      case 'coin_magnet':
+        return `${effect}m`;
+      case 'shield':
+        return `${effect}s`;
+      case 'double_coins':
+        return effect === 1 ? 'Off' : '2x';
+      case 'slow_motion':
+        return effect === 1 ? 'Off' : '0.5x';
+      default:
+        return `${effect}`;
+    }
+  };
+
+  const handlePurchase = (upgradeId: string) => {
+    console.log('=== PURCHASE BUTTON CLICKED ===');
+    console.log('Upgrade ID:', upgradeId);
+    
+    const upgrade = upgradesMap[upgradeId];
+    if (!upgrade) {
+      console.log('Upgrade not found in map!');
+      console.log('Available upgrade IDs:', Object.keys(upgradesMap));
+      console.log('Requested upgrade ID:', upgradeId);
+      return;
+    }
+    
+    const currentLevel = getUpgradeLevel(upgradeId);
+    const cost = getUpgradeCost(upgrade, currentLevel);
+    
+    console.log('Upgrade details:', {
+      name: upgrade.name,
+      currentLevel,
+      cost,
+      canAfford: canAfford(cost),
+      isMaxLevel: isMaxLevel(upgrade, currentLevel),
+      playerCoins
+    });
+    
+    if (canAfford(cost) && !isMaxLevel(upgrade, currentLevel)) {
+      console.log('Purchase conditions met, proceeding...');
+      
+      // Show confirmation for expensive purchases (over 200 coins)
+      if (cost > 200) {
+        const confirmMessage = `Are you sure you want to purchase ${upgrade.name} for ${cost} coins?`;
+        if (!confirm(confirmMessage)) {
+          console.log('Purchase cancelled by user');
+          return;
+        }
+      }
+      
+      console.log('Calling onPurchaseUpgrade...');
+      onPurchaseUpgrade(upgradeId);
+      
+      // Show success message
+      setPurchaseMessage(`✅ ${upgrade.name} upgraded to level ${currentLevel + 1}!`);
+      setShowPurchaseMessage(true);
+      
+      // Hide message after 3 seconds
+      setTimeout(() => {
+        setShowPurchaseMessage(false);
+      }, 3000);
+    } else {
+      console.log('Purchase conditions not met:', {
+        canAfford: canAfford(cost),
+        isMaxLevel: isMaxLevel(upgrade, currentLevel)
+      });
+    }
   };
 
   return (
@@ -106,6 +195,12 @@ export default function StoreScreen({
         </ScrollView>
       </View>
 
+      {showPurchaseMessage && (
+        <View style={styles.purchaseMessageContainer}>
+          <Text style={styles.purchaseMessageText}>{purchaseMessage}</Text>
+        </View>
+      )}
+
       <ScrollView style={styles.upgradesContainer} showsVerticalScrollIndicator={false}>
         {filteredUpgrades.map(upgrade => {
           const currentLevel = getUpgradeLevel(upgrade.id);
@@ -120,6 +215,11 @@ export default function StoreScreen({
                 <View style={styles.upgradeInfo}>
                   <Text style={styles.upgradeName}>{upgrade.name}</Text>
                   <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
+                  {!maxed && (
+                    <Text style={styles.upgradeEffect}>
+                      Current: {getUpgradeEffect(upgrade, currentLevel)} → Next: {getUpgradeEffect(upgrade, currentLevel + 1)}
+                    </Text>
+                  )}
                 </View>
                 <View style={styles.upgradeLevel}>
                   <Text style={styles.levelText}>Lv.{currentLevel}/{upgrade.maxLevel}</Text>
@@ -142,7 +242,7 @@ export default function StoreScreen({
                     styles.purchaseButton,
                     (!affordable || maxed) && styles.purchaseButtonDisabled
                   ]}
-                  onPress={() => onPurchaseUpgrade(upgrade.id)}
+                  onPress={() => handlePurchase(upgrade.id)}
                   disabled={!affordable || maxed}
                 >
                   <Text style={[
@@ -275,6 +375,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#a0a0a0',
     lineHeight: 16,
+    marginBottom: 4,
+  },
+  upgradeEffect: {
+    fontSize: 11,
+    color: '#4ecdc4',
+    fontWeight: '500',
   },
   upgradeLevel: {
     backgroundColor: 'rgba(78, 205, 196, 0.2)',
@@ -323,5 +429,22 @@ const styles = StyleSheet.create({
   },
   purchaseButtonTextDisabled: {
     color: '#a0a0a0',
+  },
+  purchaseMessageContainer: {
+    backgroundColor: 'rgba(78, 205, 196, 0.9)',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#4ecdc4',
+    zIndex: 2,
+  },
+  purchaseMessageText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+    textAlign: 'center',
   },
 });

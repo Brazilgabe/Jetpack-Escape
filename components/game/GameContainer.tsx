@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -19,6 +20,7 @@ import {
   GameConfig,
   Obstacle as ObstacleType,
   Coin as CoinType,
+  FuelRefill as FuelRefillType,
   PlayerStats,
 } from './types/GameTypes';
 
@@ -47,7 +49,18 @@ const checkCollision = (rect1: { x: number; y: number; width: number; height: nu
 export default function GameContainer() {
   const [gameState, setGameState] = useState<GameState>('start');
   const [highScore, setHighScore] = useState(0);
+  const [totalCoins, setTotalCoins] = useState(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
+  // Use refs to store initial values to prevent reset on re-renders
+  const initialHighScoreRef = useRef<number | null>(null);
+  const initialTotalCoinsRef = useRef<number | null>(null);
+  
+  // Use refs to persist values across re-renders
+  const persistentHighScoreRef = useRef<number>(0);
+  const persistentTotalCoinsRef = useRef<number>(0);
 
   const gameLoopRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
@@ -72,8 +85,10 @@ export default function GameContainer() {
 
   const obstaclesRef = useRef<ObstacleType[]>([]);
   const coinsRef = useRef<CoinType[]>([]);
+  const fuelRefillsRef = useRef<FuelRefillType[]>([]);
   const [obstacles, setObstacles] = useState<ObstacleType[]>([]);
   const [coinsList, setCoinsList] = useState<CoinType[]>([]);
+  const [fuelRefillsList, setFuelRefillsList] = useState<FuelRefillType[]>([]);
   const [finalScore, setFinalScore] = useState(0);
   const [finalCoins, setFinalCoins] = useState(0);
   const [finalDistance, setFinalDistance] = useState(0);
@@ -96,10 +111,78 @@ export default function GameContainer() {
   // Ref for current fuel to avoid stale closure in game loop
   const currentFuelRef = useRef(playerStats.currentFuel);
 
+  // Load saved data on component mount
+  useEffect(() => {
+    console.log('Component mounted, loading saved data...');
+    loadSavedData();
+  }, []);
+
   // Keep ref in sync with state changes
   useEffect(() => {
     currentFuelRef.current = playerStats.currentFuel;
   }, [playerStats.currentFuel]);
+
+  // Load saved data from AsyncStorage
+  const loadSavedData = useCallback(async () => {
+    if (hasInitialized) {
+      console.log('Data already initialized, skipping load');
+      return;
+    }
+    
+    try {
+      console.log('=== LOADING SAVED DATA ===');
+      const savedHighScore = await AsyncStorage.getItem('highScore');
+      const savedTotalCoins = await AsyncStorage.getItem('totalCoins');
+      const savedPlayerStats = await AsyncStorage.getItem('playerStats');
+      
+      console.log('Raw saved data:', { savedHighScore, savedTotalCoins, savedPlayerStats });
+      
+      if (savedHighScore) {
+        const highScoreValue = parseInt(savedHighScore, 10);
+        if (initialHighScoreRef.current === null) {
+          initialHighScoreRef.current = highScoreValue;
+          persistentHighScoreRef.current = highScoreValue;
+          setHighScore(highScoreValue);
+          console.log('Loaded high score:', highScoreValue);
+        }
+      }
+      
+      if (savedTotalCoins) {
+        const totalCoinsValue = parseInt(savedTotalCoins, 10);
+        if (initialTotalCoinsRef.current === null) {
+          initialTotalCoinsRef.current = totalCoinsValue;
+          persistentTotalCoinsRef.current = totalCoinsValue;
+          setTotalCoins(totalCoinsValue);
+          console.log('Loaded total coins:', totalCoinsValue);
+        }
+      }
+      
+      if (savedPlayerStats) {
+        const parsedStats = JSON.parse(savedPlayerStats);
+        setPlayerStats(parsedStats);
+        currentFuelRef.current = parsedStats.currentFuel;
+        console.log('Loaded player stats:', parsedStats);
+      }
+      
+      setIsDataLoaded(true);
+      setHasInitialized(true);
+      console.log('Data loading completed');
+    } catch (error) {
+      console.log('Error loading saved data:', error);
+      setIsDataLoaded(true); // Still set to true so game can continue
+      setHasInitialized(true);
+    }
+  }, [hasInitialized]);
+
+  // Save data to AsyncStorage
+  const saveData = useCallback(async (key: string, value: any) => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(value));
+      console.log('Saved data:', key, value);
+    } catch (error) {
+      console.log('Error saving data:', error);
+    }
+  }, []);
 
   // Smooth player movement with spring animation
   const displayY = useDerivedValue(() => 
@@ -142,48 +225,105 @@ export default function GameContainer() {
   );
 
   const startGame = useCallback(() => {
+    if (!isDataLoaded) {
+      console.log('Data not loaded yet, cannot start game');
+      return;
+    }
+    
+    console.log('=== START GAME ===');
+    console.log('Data loaded:', isDataLoaded);
+    console.log('State total coins:', totalCoins);
+    console.log('Persistent total coins:', persistentTotalCoinsRef.current);
+    console.log('Current high score:', highScore);
+    console.log('Current player stats:', playerStats);
+    
+    // Restore persistent values if state was reset
+    if (totalCoins === 0 && persistentTotalCoinsRef.current > 0) {
+      console.log('Restoring total coins from persistent ref:', persistentTotalCoinsRef.current);
+      setTotalCoins(persistentTotalCoinsRef.current);
+    }
+    
     setGameState('playing');
-    score.value = 0;
-    coins.value = 0;
-    distance.value = 0;
-    playerY.value = GROUND_LEVEL;
-    playerX.value = SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2;
-    playerVelocity.value = 0;
-    isJetpackActive.value = false;
-    controlDirection.value = 0;
-    scrollOffset.value = 0;
-    hasStarted.value = false;
-    hasLiftedOff.value = false;
-    hasReachedStaging.value = false;
-    timeSinceStart.value = 0;
+    
+    // Reset game state - use setTimeout to avoid render warnings
+    setTimeout(() => {
+      score.value = 0;
+      coins.value = 0;
+      distance.value = 0;
+      playerY.value = GROUND_LEVEL;
+      playerX.value = SCREEN_WIDTH / 2 - GameConfig.PLAYER_SIZE / 2;
+      playerVelocity.value = 0;
+      isJetpackActive.value = false;
+      controlDirection.value = 0;
+      scrollOffset.value = 0;
+      hasStarted.value = false;
+      hasLiftedOff.value = false;
+      hasReachedStaging.value = false;
+      timeSinceStart.value = 0;
+      hasFuel.value = true;
+    }, 0);
+    
     lastTimeRef.current = performance.now();
     obstaclesRef.current = [];
     coinsRef.current = [];
+    fuelRefillsRef.current = [];
     setObstacles([]);
     setCoinsList([]);
+    setFuelRefillsList([]);
     
     // Refill fuel on game start
     setPlayerStats(prev => {
       const next = { ...prev, currentFuel: prev.fuelCapacity };
       currentFuelRef.current = next.currentFuel;
-      hasFuel.value = true;
+      
+      // Save updated player stats
+      saveData('playerStats', next);
+      
       return next;
     });
     
     startGameLoop();
-  }, []);
+  }, [saveData, totalCoins]);
 
   const gameOver = useCallback(() => {
+    console.log('=== GAME OVER ===');
+    console.log('State total coins:', totalCoins);
+    console.log('Persistent total coins:', persistentTotalCoinsRef.current);
+    console.log('Score value:', score.value);
+    console.log('Coins value:', coins.value);
+    
     setGameState('gameOver');
     if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
     hasStarted.value = false;
-    const newRecord = score.value > highScore;
+    
+    const finalScoreValue = Math.floor(score.value);
+    const finalCoinsValue = Math.floor(coins.value);
+    const finalDistanceValue = Math.floor(distance.value);
+    
+    console.log('Final Score:', finalScoreValue, 'Final Coins:', finalCoinsValue, 'Current Total:', totalCoins);
+    
+    const newRecord = finalScoreValue > highScore;
     setIsNewRecord(newRecord);
-    setFinalScore(Math.floor(score.value));
-    setFinalCoins(Math.floor(coins.value));
-    setFinalDistance(Math.floor(distance.value));
-    if (newRecord) setHighScore(score.value);
-  }, [highScore]);
+    setFinalScore(finalScoreValue);
+    setFinalCoins(finalCoinsValue);
+    setFinalDistance(finalDistanceValue);
+    
+    // Save new high score if achieved
+    if (newRecord) {
+      setHighScore(finalScoreValue);
+      saveData('highScore', finalScoreValue);
+    }
+    
+    // Save total coins - use persistent ref to avoid losing coins
+    const currentTotalCoins = Math.max(totalCoins, persistentTotalCoinsRef.current);
+    const newTotalCoins = currentTotalCoins + finalCoinsValue;
+    console.log('Calculating new total:', currentTotalCoins, '+', finalCoinsValue, '=', newTotalCoins);
+    setTotalCoins(newTotalCoins);
+    persistentTotalCoinsRef.current = newTotalCoins;
+    saveData('totalCoins', newTotalCoins);
+    
+    console.log('Updated total coins:', newTotalCoins);
+  }, [highScore, totalCoins, saveData]);
 
   const restartGame = useCallback(() => setGameState('start'), []);
   
@@ -197,8 +337,23 @@ export default function GameContainer() {
     const currentLevel = getUpgradeLevel(upgradeId);
     const cost = upgrade.baseCost * (currentLevel + 1);
     
-    if (coins.value >= cost && currentLevel < upgrade.maxLevel) {
-      coins.value -= cost;
+    console.log('=== PURCHASE ATTEMPT ===');
+    console.log('Upgrade:', upgradeId);
+    console.log('Current level:', currentLevel);
+    console.log('Cost:', cost);
+    console.log('Total coins available:', totalCoins);
+    console.log('Current run coins:', coins.value);
+    
+    if (totalCoins >= cost && currentLevel < upgrade.maxLevel) {
+      console.log('Purchase successful!');
+      
+      // Deduct from total coins
+      const newTotalCoins = totalCoins - cost;
+      setTotalCoins(newTotalCoins);
+      persistentTotalCoinsRef.current = newTotalCoins;
+      
+      // Save updated total coins
+      saveData('totalCoins', newTotalCoins);
       
       setPlayerStats(prevStats => {
         const newStats = { ...prevStats };
@@ -229,10 +384,17 @@ export default function GameContainer() {
             break;
         }
         
+        console.log('Updated player stats:', newStats);
+        
+        // Save updated player stats
+        saveData('playerStats', newStats);
+        
         return newStats;
       });
+    } else {
+      console.log('Purchase failed - insufficient coins or max level reached');
     }
-  }, [coins]);
+  }, [totalCoins, playerStats, saveData]);
   
   const getUpgradeLevel = (upgradeId: string): number => {
     switch (upgradeId) {
@@ -538,7 +700,107 @@ export default function GameContainer() {
     
     coinsRef.current = coinsList;
     runOnJS(setCoinsList)(coinsList);
-  }, [playerStats, gameOver, setObstacles, setCoinsList]);
+
+    // Update fuel refills with optimized logic and collision detection
+    // Use the same movement logic as coins - only move when jetpack is active
+    if (isJetpackActive.value && hasStarted.value) {
+      const fuelRefillScrollSpeed = GameConfig.SCROLL_SPEED * (0.5 + velocityFactor * 0.5) * 0.3;
+      fuelRefillsRef.current.forEach(f => {
+        f.y.value = f.y.value + fuelRefillScrollSpeed * dt;
+      });
+    }
+    
+    const fuelRefillsList = fuelRefillsRef.current.filter(f => {
+      const yValue = f.y.value;
+      const collectedValue = f.collected.value;
+      return yValue > -50 && yValue < SCREEN_HEIGHT + 50 && !collectedValue;
+    });
+    
+    // Check fuel refill collisions
+    fuelRefillsList.forEach(fuelRefill => {
+      if (!fuelRefill.collected.value) {
+        const playerHitbox = {
+          x: playerX.value + GameConfig.PLAYER_HITBOX.offsetX,
+          y: playerY.value + GameConfig.PLAYER_HITBOX.offsetY,
+          width: GameConfig.PLAYER_HITBOX.width,
+          height: GameConfig.PLAYER_HITBOX.height,
+        };
+        
+        const fuelRefillHitbox = {
+          x: fuelRefill.x.value,
+          y: fuelRefill.y.value,
+          width: 30, // Match size
+          height: 30, // Match size
+        };
+        
+        if (checkCollision(playerHitbox, fuelRefillHitbox)) {
+          // Add fuel to player
+          const newFuel = Math.min(playerStats.fuelCapacity, currentFuelRef.current + fuelRefill.fuelAmount);
+          currentFuelRef.current = newFuel;
+          runOnJS(setPlayerStats)(prev => ({ ...prev, currentFuel: newFuel }));
+          
+          // Update fuel availability for worklets
+          hasFuel.value = newFuel > 0;
+          
+          // Mark as collected
+          fuelRefill.collected.value = true;
+        }
+      }
+    });
+    
+    // Spawn new fuel refills when fuel is low
+    if (Math.random() < GameConfig.FUEL_REFILL_SPAWN_RATE && hasStarted.value && currentFuelRef.current < playerStats.fuelCapacity * 0.2) {
+      const currentDistance = derivedDistance.value;
+      const x = Math.random() * (SCREEN_WIDTH - 30);
+      
+      // Determine fuel refill type based on altitude
+      let refillType: 'small' | 'medium' | 'large' = 'small';
+      const availableTypes = Object.entries(GameConfig.FUEL_REFILL_TYPES).filter(([_, config]) => 
+        currentDistance >= config.minAltitude && currentDistance <= config.maxAltitude
+      );
+      
+      if (availableTypes.length > 0) {
+        // Weight the selection - larger refills are rarer
+        const weights = availableTypes.map(([type, config]) => {
+          switch (type) {
+            case 'small': return 50;
+            case 'medium': return 30;
+            case 'large': return 20;
+            default: return 10;
+          }
+        });
+        
+        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+        let random = Math.random() * totalWeight;
+        
+        for (let i = 0; i < availableTypes.length; i++) {
+          random -= weights[i];
+          if (random <= 0) {
+            refillType = availableTypes[i][0] as any;
+            break;
+          }
+        }
+      } else {
+        // Fallback to small if no types available
+        refillType = 'small';
+      }
+      
+      const refillConfig = GameConfig.FUEL_REFILL_TYPES[refillType];
+      const newFuelRefill: FuelRefillType = {
+        id: `fuel-${Date.now()}`,
+        x: createSharedValue(x),
+        y: createSharedValue(-30), // Spawn above screen
+        collected: createBooleanSharedValue(false),
+        active: createBooleanSharedValue(true),
+        fuelAmount: refillConfig.fuelAmount,
+        type: refillType
+      };
+      fuelRefillsList.push(newFuelRefill);
+    }
+    
+    fuelRefillsRef.current = fuelRefillsList;
+    runOnJS(setFuelRefillsList)(fuelRefillsList);
+  }, [playerStats, gameOver, setObstacles, setCoinsList, setFuelRefillsList]);
 
   // Cross-platform gesture handling
   const panGesture = Gesture.Pan()
@@ -612,7 +874,7 @@ export default function GameContainer() {
 
   return (
     <View style={styles.container}>
-      {gameState === 'start' && <StartScreen onStart={startGame} onOpenStore={openStore} highScore={highScore} />}
+              {gameState === 'start' && <StartScreen onStart={startGame} onOpenStore={openStore} highScore={highScore} totalCoins={totalCoins} isDataLoaded={isDataLoaded} />}
       {gameState === 'playing' && (
         <GestureDetector gesture={combinedGesture}>
           <View style={styles.gameArea}>
@@ -625,6 +887,7 @@ export default function GameContainer() {
               isJetpackActive={isJetpackActive}
               obstacles={obstacles}
               coinsList={coinsList}
+              fuelRefillsList={fuelRefillsList}
               hudScore={hudScore}
               hudCoins={hudCoins}
               hudDistance={hudDistance}
@@ -647,7 +910,7 @@ export default function GameContainer() {
       {gameState === 'store' && (
         <StoreScreen
           onBack={closeStore}
-          playerCoins={hudCoins}
+          playerCoins={totalCoins}
           playerStats={playerStats}
           onPurchaseUpgrade={purchaseUpgrade}
         />

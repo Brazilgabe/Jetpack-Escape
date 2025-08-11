@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -17,14 +17,11 @@ interface CoinProps {
 }
 
 export default function Coin({ coin }: CoinProps) {
-  const rotation = useSharedValue(0);
   const scale = useSharedValue(1);
-  const [isActive, setIsActive] = React.useState(true);
+  const opacity = useSharedValue(1);
   const [isCollected, setIsCollected] = React.useState(false);
 
-  useEffect(() => {
-    rotation.value = withRepeat(withTiming(360, { duration: 2000 }), -1, false);
-
+  React.useEffect(() => {
     scale.value = withRepeat(
       withSequence(
         withTiming(1.1, { duration: 800 }),
@@ -35,31 +32,37 @@ export default function Coin({ coin }: CoinProps) {
     );
   }, []);
 
-  // Use useAnimatedReaction to sync active and collected states
-  useAnimatedReaction(
-    () => coin.active.value,
-    (value) => {
-      runOnJS(setIsActive)(value);
-    }
-  );
-
+  // Handle collection animation
   useAnimatedReaction(
     () => coin.collected.value,
     (value) => {
-      runOnJS(setIsCollected)(value);
+      if (value) {
+        scale.value = withTiming(1.5, { duration: 200 });
+        opacity.value = withTiming(0, { duration: 200 });
+        runOnJS(setIsCollected)(true);
+      }
     }
   );
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: coin.x.value },
-      { translateY: coin.y.value },
-      { rotate: `${rotation.value}deg` },
-      { scale: scale.value },
-    ],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    // Access shared values within the worklet
+    const coinX = coin.x.value;
+    const coinY = coin.y.value;
+    const currentScale = scale.value;
+    const currentOpacity = opacity.value;
+    
+    return {
+      transform: [
+        { translateX: coinX },
+        { translateY: coinY },
+        { scale: currentScale },
+      ],
+      opacity: currentOpacity,
+    };
+  });
 
-  if (!isActive || isCollected) {
+  if (isCollected) {
     return null;
   }
 
@@ -69,8 +72,6 @@ export default function Coin({ coin }: CoinProps) {
         colors={['#ffd93d', '#f39c12', '#e67e22']}
         style={styles.coin}
       />
-      <View style={styles.innerCircle} />
-      <View style={styles.center} />
     </Animated.View>
   );
 }
@@ -85,26 +86,5 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  innerCircle: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#f1c40f',
-    top: 5,
-    left: 5,
-  },
-  center: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-    top: 11,
-    left: 11,
-    opacity: 0.7,
   },
 });

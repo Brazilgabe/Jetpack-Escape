@@ -19,21 +19,24 @@ export default function GameScreen({
   hudScore,
   hudCoins,
   hudDistance,
+  fuelPercentage,
+  playerStats,
 }: GameProps) {
   return (
     <View style={styles.container}>
       <ParallaxBackground scrollOffset={scrollOffset} distance={distance} />
 
       <View style={styles.gameArea}>
-        {/* {obstacles?.map((obstacle) => (
+        {obstacles?.map((obstacle) => (
           <Obstacle key={obstacle.id} obstacle={obstacle} />
-        ))} */}
-        {/* {coinsList?.map((coin) => (
+        ))}
+        {coinsList?.map((coin) => (
           <Coin key={coin.id} coin={coin} />
-        ))} */}
+        ))}
         <Player
           animatedStyle={playerAnimatedStyle}
           isJetpackActive={isJetpackActive}
+          playerStats={playerStats}
         />
       </View>
 
@@ -41,6 +44,8 @@ export default function GameScreen({
         scoreValue={hudScore || 0}
         coinsValue={hudCoins || 0}
         distanceValue={hudDistance || 0}
+        fuelPercentage={fuelPercentage}
+        playerStats={playerStats}
       />
     </View>
   );

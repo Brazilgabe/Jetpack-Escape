@@ -37,13 +37,16 @@ export default function Obstacle({ obstacle }: ObstacleProps) {
     }
   );
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: obstacle.x.value },
-      { translateY: obstacle.y.value },
-      { rotate: `${rotation.value}deg` },
-    ],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [
+        { translateX: obstacle.x.value },
+        { translateY: obstacle.y.value },
+        { rotate: `${rotation.value}deg` },
+      ],
+    };
+  });
 
   const renderObstacle = () => {
     switch (obstacle.type) {

@@ -9,10 +9,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface StartScreenProps {
   onStart: () => void;
+  onOpenStore: () => void;
   highScore: number;
 }
 
-export default function StartScreen({ onStart, highScore }: StartScreenProps) {
+export default function StartScreen({ onStart, onOpenStore, highScore }: StartScreenProps) {
   const staticScrollOffset = useSharedValue(0);
 
   return (
@@ -44,6 +45,15 @@ export default function StartScreen({ onStart, highScore }: StartScreenProps) {
             style={styles.playButtonGradient}
           >
             <Text style={styles.playButtonText}>TAP TO PLAY</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.storeButton} onPress={onOpenStore}>
+          <LinearGradient
+            colors={['#4ecdc4', '#44a08d']}
+            style={styles.storeButtonGradient}
+          >
+            <Text style={styles.storeButtonText}>STORE</Text>
           </LinearGradient>
         </TouchableOpacity>
         
@@ -130,6 +140,27 @@ const styles = StyleSheet.create({
   },
   playButtonText: {
     fontSize: 20,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 2,
+  },
+  storeButton: {
+    marginBottom: 20,
+    borderRadius: 25,
+    elevation: 6,
+    shadowColor: '#4ecdc4',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  storeButtonGradient: {
+    paddingHorizontal: 40,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  storeButtonText: {
+    fontSize: 18,
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: 2,

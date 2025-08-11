@@ -10,7 +10,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function JetpackFlame() {
+interface JetpackFlameProps {
+  intensity?: number;
+}
+
+export default function JetpackFlame({ intensity = 1 }: JetpackFlameProps) {
   const flameScale = useSharedValue(1);
   const flameOpacity = useSharedValue(0.8);
   const particle1Opacity = useSharedValue(0.7);
@@ -67,22 +71,34 @@ export default function JetpackFlame() {
     );
   }, []);
 
-  const flameAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleY: flameScale.value }],
-    opacity: flameOpacity.value,
-  }));
+  const flameAnimatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ scaleY: flameScale.value * intensity }],
+      opacity: flameOpacity.value,
+    };
+  });
 
-  const particle1Style = useAnimatedStyle(() => ({
-    opacity: particle1Opacity.value,
-  }));
+  const particle1Style = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: particle1Opacity.value,
+    };
+  });
 
-  const particle2Style = useAnimatedStyle(() => ({
-    opacity: particle2Opacity.value,
-  }));
+  const particle2Style = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: particle2Opacity.value,
+    };
+  });
 
-  const particle3Style = useAnimatedStyle(() => ({
-    opacity: particle3Opacity.value,
-  }));
+  const particle3Style = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: particle3Opacity.value,
+    };
+  });
 
   return (
     <View style={styles.container}>

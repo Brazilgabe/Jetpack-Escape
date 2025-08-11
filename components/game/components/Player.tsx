@@ -6,22 +6,32 @@ import JetpackFlame from '@/components/game/components/JetpackFlame';
 interface PlayerProps {
   animatedStyle: any;
   isJetpackActive: Animated.SharedValue<boolean>;
+  playerStats?: {
+    jetpackSpeed: number;
+    fuelEfficiency: number;
+  };
 }
 
-export default function Player({ animatedStyle, isJetpackActive }: PlayerProps) {
-  const leftFlameStyle = useAnimatedStyle(() => ({
-    opacity: isJetpackActive.value ? 1 : 0,
-    transform: [
-      { scaleY: isJetpackActive.value ? 1 : 0.3 },
-    ],
-  }));
+export default function Player({ animatedStyle, isJetpackActive, playerStats }: PlayerProps) {
+  const leftFlameStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: isJetpackActive.value ? 1 : 0,
+      transform: [
+        { scaleY: isJetpackActive.value ? 1 : 0.3 },
+      ],
+    };
+  });
 
-  const rightFlameStyle = useAnimatedStyle(() => ({
-    opacity: isJetpackActive.value ? 1 : 0,
-    transform: [
-      { scaleY: isJetpackActive.value ? 1 : 0.3 },
-    ],
-  }));
+  const rightFlameStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: isJetpackActive.value ? 1 : 0,
+      transform: [
+        { scaleY: isJetpackActive.value ? 1 : 0.3 },
+      ],
+    };
+  });
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -34,12 +44,12 @@ export default function Player({ animatedStyle, isJetpackActive }: PlayerProps) 
       
       {/* Left Flame */}
       <Animated.View style={[styles.leftFlameContainer, leftFlameStyle]}>
-        <JetpackFlame />
+        <JetpackFlame intensity={playerStats?.jetpackSpeed || 1} />
       </Animated.View>
       
       {/* Right Flame */}
       <Animated.View style={[styles.rightFlameContainer, rightFlameStyle]}>
-        <JetpackFlame />
+        <JetpackFlame intensity={playerStats?.jetpackSpeed || 1} />
       </Animated.View>
     </Animated.View>
   );
